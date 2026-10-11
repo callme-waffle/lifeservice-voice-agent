@@ -176,6 +176,7 @@ M5-S4/S5의 fake 경계 단위 검증만 통과했다. M6-S1에서 `config.py`�
 - `channels/ht813/turns.py`는 16 kHz PCM 에너지, 연속 무음, 최대 발화 길이로 턴을 끝낸다. 기본값은 각각 RMS 400, 800 ms, 15,000 ms이며 `VOICE_AGENT_HT813_VAD_ENERGY`, `VOICE_AGENT_HT813_VAD_SILENCE_MS`, `VOICE_AGENT_HT813_MAX_UTTERANCE_MS`로 조정한다. 무음은 통화 종료 신호가 아니다.
 - `OutboundCallManager`는 발신 시도부터 SIP 정리까지 웹과 공유하는 단일 세션을 점유한다. 발신 목적지는 `VOICE_AGENT_HT813_ALLOWED_EXACT`의 정확한 번호만 사용한다. 처리·송출 중 들어온 입력은 다음 턴으로 재사용하지 않고 RTP DTMF와 이벤트 순서를 보존한다. 상대 BYE 또는 운영자 취소에 모델·송출을 취소하고 점유를 해제한다.
 - 로컬 운영 진입점은 loopback HTTP 클라이언트에만 열리며 `Authorization: Bearer <VOICE_AGENT_WEB_ACCESS_TOKEN>`을 요구한다. `POST /operator/calls`의 JSON 본문은 `{"number":"<허용된 정확한 번호>"}`이고, 응답의 `session_id`로 `GET /operator/calls/{session_id}` 상태를 보거나 `DELETE /operator/calls/{session_id}`로 취소한다. URL·일반 로그에 목적지 번호를 넣지 않는다. 운영 API를 외부 프록시로 노출하지 않는다.
+- `GET /operator/calls/{session_id}/conversation`은 같은 로컬 Bearer 경계에서 보존 중인 최종 사용자 전사·AI 응답을 `turn_index`, `speaker`, `text`, `created_at` 순서화된 항목으로 제공한다. 텍스트 없는 통화·만료·미확인 ID는 404, 손상 파일은 원문 없는 503을 반환한다. [운영 가이드](../../docs/guides/call-conversation-history.md)를 따른다.
 - 이 조립은 가짜 SIP/RTP·ASGI 단위 시험으로만 검증됐다. 실제 HT813 인증·코덱·번호 전달·양방향 음성과 지연은 M6-S2의 별도 Gate 2 후 판정한다.
 
 ### M6-S1-T5 모든 FXO 착신 수신

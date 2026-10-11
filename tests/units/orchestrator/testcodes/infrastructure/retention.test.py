@@ -204,6 +204,60 @@ def test_voic_feat_001_m6_s1_t6_old_temporary_ciphertext_is_cleaned():
                for event in audit)
 
 
+def test_voic_feat_005_m8_s2_t1_orders_only_matching_final_text():
+    """Given mixed retained turns, when looked up, then only matching final text stays ordered."""
+    session_id, other_id = uuid4(), uuid4()
+    store = retention()
+    store.ready = True
+
+    class Directory:
+        def glob(self, pattern):
+            assert pattern == "*.va1"
+            return [Path(str(index)) for index in range(4)]
+
+    store.transcripts_dir = Directory()
+    entries = [
+        (NOW + timedelta(seconds=3), {"session_id": str(session_id), "channel": "ht813_fxo", "kind": "response",
+                                     "turn_index": 1, "text": "답변"}),
+        (NOW + timedelta(seconds=1), {"session_id": str(session_id), "channel": "ht813_fxo", "kind": "transcript",
+                                     "turn_index": 0, "text": "질문"}),
+        (NOW + timedelta(seconds=2), {"session_id": str(other_id), "channel": "web", "kind": "transcript",
+                                     "turn_index": 0, "text": "다른 통화"}),
+        (NOW + timedelta(seconds=3), {"session_id": str(session_id), "channel": "ht813_fxo", "kind": "transcript",
+                                     "turn_index": 1, "text": "후속 질문"}),
+    ]
+    store.read_artifact = lambda path: entries[int(path.name)]
+    result = store.list_conversation(session_id)
+    assert result["session_id"] == str(session_id)
+    assert [(turn["turn_index"], turn["speaker"], turn["text"]) for turn in result["turns"]] == [
+        (0, "user", "질문"), (1, "user", "후속 질문"), (1, "assistant", "답변"),
+    ]
+
+
+def test_voic_feat_005_m8_s2_t1_excludes_web_session_from_call_api():
+    """Given a web transcript, when looking up a call, then no web content is returned."""
+    session_id = uuid4()
+    store = retention()
+    store.ready = True
+    store.transcripts_dir = type("Directory", (), {"glob": lambda self, _: [Path("0")]})()
+    store.read_artifact = lambda path: (NOW, {"session_id": str(session_id),
+                                                    "channel": "web", "kind": "transcript",
+                                                    "turn_index": 0, "text": "웹 전사"})
+    assert store.list_conversation(session_id) == {"session_id": str(session_id), "turns": []}
+
+
+def test_voic_feat_005_m8_s2_t1_rejects_corrupt_text_without_leaking():
+    """Given a malformed retained file, when queried, then it fails without original text."""
+    store = retention()
+    store.ready = True
+    store.transcripts_dir = type("Directory", (), {"glob": lambda self, _: [Path("0")]})()
+    store.read_artifact = lambda path: (NOW, {"session_id": str(uuid4()),
+                                                    "channel": "ht813_fxo", "kind": "response", "turn_index": -1,
+                                                    "text": "비밀 원문"})
+    with pytest.raises(RetentionUnavailable) as raised:
+        store.list_conversation(uuid4())
+    assert "비밀 원문" not in str(raised.value)
+
 @pytest.mark.asyncio
 async def test_voic_feat_004_m7_s2_t1_call_metadata_is_encrypted_and_expires(tmp_path):
     """Given an accepted call, when it ends, then encrypted metadata lists it until day 30."""

@@ -117,6 +117,19 @@ def operator_router(service: OperatorCalls) -> APIRouter:
             raise HTTPException(404, "call not found")
         return {"session_id": str(entry.session_id), "status": entry.status}
 
+    @router.get("/operator/calls/{session_id}/conversation")
+    async def call_conversation(session_id: UUID, request: Request) -> dict[str, object]:
+        authorize(request)
+        if service.retention is None:
+            raise HTTPException(503, "conversation history unavailable")
+        try:
+            result = await asyncio.to_thread(service.retention.list_conversation, session_id)
+        except RetentionUnavailable:
+            raise HTTPException(503, "conversation history unavailable") from None
+        if not result["turns"]:
+            raise HTTPException(404, "conversation not found")
+        return result
+
     @router.get("/operator/inbound-calls")
     async def inbound_calls(request: Request, limit: int = 50,
                             offset: int = 0) -> dict[str, object]:

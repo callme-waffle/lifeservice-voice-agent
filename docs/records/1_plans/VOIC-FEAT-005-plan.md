@@ -4,7 +4,7 @@
 |---|---|
 |계획 ID|VOIC-FEAT-005-plan|
 |원본 이슈|[VOIC-FEAT-005](../0_issues/VOIC-FEAT-005.md)|
-|상태|approved|
+|상태|executed|
 |작성 시간|2026-10-11 08:11:06 UTC|
 |작성 에이전트|Codex|
 |승인자|사용자 — “나머지 작업들을 이어 진행하세요”|
@@ -183,6 +183,7 @@ GitHub 저장소 생성·푸시 자격 증명과 PR 작성 권한. 실제 전화
 - 통합 테스트 필요 여부 검토 결과: 필요
 - 검토 사유: AES-GCM 파일 읽기와 HTTP 응답 경계가 기능의 핵심이다.
 - 사전승인 (Gate 1): 사용자 2026-10-11 계속 진행 지시로 승인. 합성 데이터 통합 시험 실행 직전 Gate 2는 별도로 확인한다.
+- 최종승인 (Gate 2): 사용자 2026-10-11 “두 기능의 합성 통합 시험 승인”. 실제 전화·외부 작업 API는 제외한다.
 - 대상 시나리오: 합성 두 턴·단일 응답·무음 통화를 저장하고 인증된 API에서 조회한다. 실전화는 제외한다.
 
 ---
@@ -195,11 +196,11 @@ GitHub 저장소 생성·푸시 자격 증명과 PR 작성 권한. 실제 전화
 
 # 8. 완료 게이트
 
-- [ ] 모든 마일스톤 검증 통과
-- [ ] 관련 테스트 실행 및 통과
-- [ ] 실행 로그 기록 (`docs/records/2_logs/`)
-- [ ] 관련 문서(README/guides) 갱신
-- [ ] `feat/call-conversation-history`의 PR 생성
+- [x] 모든 마일스톤 검증 통과
+- [x] 관련 테스트 실행 및 통과
+- [x] 실행 로그 기록 (`docs/records/2_logs/`)
+- [x] 관련 문서(README/guides) 갱신
+- [x] `feat/call-conversation-history`의 [PR #2](https://github.com/callme-waffle/lifeservice-voice-agent/pull/2) 생성
 
 ---
 

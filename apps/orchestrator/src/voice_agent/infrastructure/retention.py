@@ -275,6 +275,40 @@ class EncryptedRetention:
         next_offset = offset + limit if offset + limit < len(rows) else None
         return {"items": page, "next_offset": next_offset}
 
+    def list_conversation(self, session_id: UUID) -> dict[str, object]:
+        """Read retained final text for one call; never take a caller-supplied file path."""
+        if not self.ready:
+            raise RetentionUnavailable("retention is unavailable")
+        now = self._now()
+        turns: list[dict[str, object]] = []
+        for path in self.transcripts_dir.glob("*.va1"):
+            created, payload = self.read_artifact(path)
+            if self.expired(created, now):
+                continue
+            try:
+                artifact_session = UUID(str(payload["session_id"]))
+                channel = payload["channel"]
+                kind = payload["kind"]
+                turn_index = payload["turn_index"]
+                value = payload["text"]
+                if (channel not in ("web", "ht813_fxo")
+                        or kind not in ("transcript", "response")
+                        or not isinstance(turn_index, int) or isinstance(turn_index, bool)
+                        or turn_index < 0 or not isinstance(value, str) or not value.strip()):
+                    raise ValueError
+            except (KeyError, TypeError, ValueError):
+                raise RetentionUnavailable("invalid conversation artifact") from None
+            if artifact_session == session_id and channel == "ht813_fxo":
+                turns.append({
+                    "turn_index": turn_index,
+                    "speaker": "user" if kind == "transcript" else "assistant",
+                    "text": value,
+                    "created_at": created.isoformat(),
+                })
+        turns.sort(key=lambda item: (item["turn_index"], item["created_at"],
+                                     item["speaker"] != "user"))
+        return {"session_id": str(session_id), "turns": turns}
+
     @staticmethod
     def expired(created: datetime, now: datetime) -> bool:
         return (EncryptedRetention._utc_us(created) + _RETENTION_US
