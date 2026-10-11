@@ -32,6 +32,7 @@ async def test_voic_feat_005_m8_s3_prd08_srs_o04_conversation_boundary(tmp_path:
     await store.start()
     call = SessionContext(uuid4(), Channel.HT813_FXO, START)
     other = SessionContext(uuid4(), Channel.WEB, START)
+    web_same_id = SessionContext(call.session_id, Channel.WEB, START)
     app = FastAPI()
     app.include_router(operator_router(OperatorCalls(None, SingleSessionGate(), TOKEN, store)))
     path = f"/operator/calls/{call.session_id}/conversation"
@@ -43,8 +44,9 @@ async def test_voic_feat_005_m8_s3_prd08_srs_o04_conversation_boundary(tmp_path:
         instant[0] += timedelta(seconds=1)
         await store.record_text(call, 1, "transcript", "합성 후속 질문")
         await store.record_text(other, 0, "transcript", "다른 통화의 비공개 질문")
+        await store.record_text(web_same_id, 0, "transcript", "같은 ID의 웹 전사")
         files = list(store.transcripts_dir.glob("*.va1"))
-        assert len(files) == 4
+        assert len(files) == 5
         assert all("합성".encode() not in item.read_bytes() for item in files)
         assert all("합성" not in item.name for item in files)
 

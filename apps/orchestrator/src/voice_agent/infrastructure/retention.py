@@ -224,16 +224,18 @@ class EncryptedRetention:
                 continue
             try:
                 artifact_session = UUID(str(payload["session_id"]))
+                channel = payload["channel"]
                 kind = payload["kind"]
                 turn_index = payload["turn_index"]
                 value = payload["text"]
-                if (kind not in ("transcript", "response")
+                if (channel not in ("web", "ht813_fxo")
+                        or kind not in ("transcript", "response")
                         or not isinstance(turn_index, int) or isinstance(turn_index, bool)
                         or turn_index < 0 or not isinstance(value, str) or not value.strip()):
                     raise ValueError
             except (KeyError, TypeError, ValueError):
                 raise RetentionUnavailable("invalid conversation artifact") from None
-            if artifact_session == session_id:
+            if artifact_session == session_id and channel == "ht813_fxo":
                 turns.append({
                     "turn_index": turn_index,
                     "speaker": "user" if kind == "transcript" else "assistant",
