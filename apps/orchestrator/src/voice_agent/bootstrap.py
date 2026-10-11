@@ -38,6 +38,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     retention = EncryptedRetention(
         recordings_dir=settings.recordings_dir,
         transcripts_dir=settings.transcripts_dir,
+        calls_dir=settings.calls_dir,
         audit_path=settings.deletion_audit_path,
         key=settings.data_encryption_key,
         sweep_interval_s=settings.retention_sweep_interval_s,
@@ -65,10 +66,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         rtp_port=settings.ht813_inbound_rtp_port,
         user_id=settings.ht813_user, runner=runner, gate=gate,
         boundary=settings.turn_boundary,
+        retention=retention, caller_id_header=settings.ht813_caller_id_header,
     ) if settings.ht813_inbound_enabled else None
 
     calls = OperatorCalls(OutboundCallManager(outbound, runner, gate, settings.turn_boundary)
-                          if outbound is not None else None, gate, settings.web_token)
+                          if outbound is not None else None, gate, settings.web_token,
+                          retention=retention)
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):

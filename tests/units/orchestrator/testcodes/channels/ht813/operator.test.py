@@ -103,3 +103,43 @@ async def test_voic_feat_001_m6_s1_t4_operator_asgi_smoke_without_device():
         await service.close()
     assert gate.active_session_id is None
     assert manager.calls == 1
+
+
+@pytest.mark.asyncio
+async def test_voic_feat_004_m7_s2_t2_inbound_history_requires_local_auth_and_bounds_page():
+    """Given a fake history store, when queried, then only bounded authorized local pages return."""
+    import httpx
+    from fastapi import FastAPI
+
+    class FakeRetention:
+        def list_inbound_calls(self, *, limit, offset):
+            assert (limit, offset) == (2, 0)
+            return {"items": [{"session_id": str(uuid4()), "caller_number": "01012345678"}],
+                    "next_offset": None}
+
+    app = FastAPI()
+    app.include_router(operator_router(OperatorCalls(
+        None, SingleSessionGate(), "test-only-token", retention=FakeRetention(),
+    )))
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app, client=("127.0.0.1", 1234)),
+        base_url="http://localhost",
+    ) as client:
+        denied = await client.get("/operator/inbound-calls")
+        assert denied.status_code == 401
+        response = await client.get("/operator/inbound-calls?limit=2", headers={
+            "Authorization": "Bearer test-only-token",
+        })
+        assert response.status_code == 200
+        assert response.json()["items"][0]["caller_number"] == "01012345678"
+        invalid = await client.get("/operator/inbound-calls?limit=101", headers={
+            "Authorization": "Bearer test-only-token",
+        })
+        assert invalid.status_code == 422
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app, client=("192.0.2.4", 1234)),
+        base_url="http://localhost",
+    ) as client:
+        assert (await client.get("/operator/inbound-calls", headers={
+            "Authorization": "Bearer test-only-token",
+        })).status_code == 403

@@ -6,7 +6,7 @@ from uuid import uuid4
 
 import pytest
 
-from voice_agent.channels.ht813.inbound import InboundSIPService
+from voice_agent.channels.ht813.inbound import InboundSIPService, extract_caller_number
 from voice_agent.channels.ht813.sip import parse_sip, request_bytes
 from voice_agent.channels.ht813.turns import TurnBoundary
 from voice_agent.contracts.flow import SingleSessionGate
@@ -18,6 +18,20 @@ from voice_agent.core.orchestrator import VoiceOrchestrator
 
 PEER = ("192.0.2.17", 5062)
 LOCAL = "192.0.2.50"
+
+
+@pytest.mark.parametrize("source,headers,expected", [
+    ("from", {"from": "<sip:+821012345678@example.test>;tag=x"}, "+821012345678"),
+    ("p-asserted-identity", {"from": "<sip:agent@example.test>",
+                             "p-asserted-identity": "<tel:01012345678>"}, "01012345678"),
+    ("p-preferred-identity", {"p-preferred-identity": "<sip:0212345678@example.test>"}, "0212345678"),
+    ("disabled", {"from": "<sip:01012345678@example.test>"}, None),
+    ("from", {"from": "<sip:12345678@example.test>"}, None),
+    ("from", {"from": "<sip:anonymous@example.test>"}, None),
+])
+def test_voic_feat_004_m7_s2_t1_reads_only_configured_caller_header(source, headers, expected):
+    """Given one configured identity header, when parsed, then only a real number is returned."""
+    assert extract_caller_number(headers, source=source, account_id="12345678") == expected
 
 
 def packet(method, call_id="test-call", caller="caller", sdp=True):
@@ -76,7 +90,7 @@ async def wait_for(predicate):
     await asyncio.wait_for(wait(), 1)
 
 
-def service(runner=None, gate=None):
+def service(runner=None, gate=None, retention=None):
     sent, medias, events = [], [], Events()
     async def send(data, source):
         assert source == PEER
@@ -91,9 +105,34 @@ def service(runner=None, gate=None):
         peer_host=PEER[0], peer_port=PEER[1], local_host=LOCAL,
         sip_port=5061, rtp_port=4002, user_id="agent",
         runner=runner or object(), gate=gate, boundary=TurnBoundary(400, 100, 2000),
-        events=events, media_factory=media_factory, send_packet=send,
+        events=events, retention=retention,
+        media_factory=media_factory, send_packet=send,
     )
     return instance, gate, sent, medias, events
+
+
+@pytest.mark.asyncio
+async def test_voic_feat_004_m7_s2_t1_inbound_records_speechless_cancel():
+    """Given a trusted incoming call without speech, when cancelled, then start/end are recorded."""
+    class FakeRetention:
+        def __init__(self):
+            self.starts = []
+            self.ends = []
+        async def record_call_start(self, context, caller_number):
+            self.starts.append((context, caller_number))
+        async def record_call_end(self, context, status):
+            self.ends.append((context, status))
+
+    store = FakeRetention()
+    inbound, gate, sent, medias, _ = service(retention=store)
+    await inbound.handle_packet(packet("INVITE", caller="01012345678"), PEER)
+    assert len(store.starts) == 1
+    assert store.starts[0][1] == "01012345678"
+    await inbound.handle_packet(packet("CANCEL", sdp=False), PEER)
+    await wait_for(lambda: len(store.ends) == 1)
+    assert store.ends[0] == (store.starts[0][0], "ended")
+    assert gate.active_session_id is None
+    assert medias[0].closed
 
 
 @pytest.mark.asyncio
