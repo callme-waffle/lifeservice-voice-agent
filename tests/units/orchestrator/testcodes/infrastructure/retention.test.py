@@ -202,3 +202,58 @@ def test_voic_feat_001_m6_s1_t6_old_temporary_ciphertext_is_cleaned():
     assert temp.deleted
     assert all(event["kind"] == "temporary" and event["reason_code"] == "orphan_temp"
                for event in audit)
+
+
+@pytest.mark.asyncio
+async def test_voic_feat_004_m7_s2_t1_call_metadata_is_encrypted_and_expires(tmp_path):
+    """Given an accepted call, when it ends, then encrypted metadata lists it until day 30."""
+    current = [NOW]
+    store = EncryptedRetention(
+        recordings_dir=tmp_path / "audio", transcripts_dir=tmp_path / "text",
+        calls_dir=tmp_path / "calls", audit_path=tmp_path / "audit.jsonl",
+        key=b"K" * 32, clock=lambda: current[0],
+    )
+    await store.start()
+    try:
+        context = SessionContext(uuid4(), Channel.HT813_FXO, NOW)
+        start = await store.record_call_start(context, "01012345678")
+        assert b"01012345678" not in start.read_bytes()
+        assert "01012345678" not in start.name
+        current[0] = NOW + timedelta(seconds=1)
+        await store.record_call_end(context, "ended")
+        rows = store.list_inbound_calls(limit=1)
+        assert rows["items"] == [{
+            "session_id": str(context.session_id), "started_at": NOW.isoformat(),
+            "ended_at": current[0].isoformat(), "status": "ended",
+            "caller_number": "01012345678",
+        }]
+        assert rows["next_offset"] is None
+        current[0] = NOW + timedelta(days=30)
+        assert store.list_inbound_calls()["items"] == []
+        current[0] += timedelta(seconds=1)
+        assert await store.sweep() == 2
+    finally:
+        await store.close()
+
+
+@pytest.mark.asyncio
+async def test_voic_feat_004_m7_s2_t1_missing_number_incomplete_and_corrupt_record(tmp_path):
+    """Given no caller ID or end event, when queried, then null/incomplete appear; corruption fails closed."""
+    store = EncryptedRetention(
+        recordings_dir=tmp_path / "audio", transcripts_dir=tmp_path / "text",
+        calls_dir=tmp_path / "calls", audit_path=tmp_path / "audit.jsonl",
+        key=b"K" * 32, clock=lambda: NOW,
+    )
+    await store.start()
+    try:
+        context = SessionContext(uuid4(), Channel.HT813_FXO, NOW)
+        await store.record_call_start(context, None)
+        assert store.list_inbound_calls()["items"][0]["status"] == "incomplete"
+        assert store.list_inbound_calls()["items"][0]["caller_number"] is None
+        bad = store.calls_dir / "bad.va1"
+        bad.write_bytes(b"invalid")
+        bad.chmod(0o600)
+        with pytest.raises(RetentionUnavailable):
+            store.list_inbound_calls()
+    finally:
+        await store.close()

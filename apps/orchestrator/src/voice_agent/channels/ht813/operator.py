@@ -12,9 +12,11 @@ from fastapi import APIRouter, HTTPException, Request, Response
 
 from voice_agent.channels.ht813.call_manager import OutboundCallManager
 from voice_agent.contracts.flow import CancellationToken, SessionBusy, SingleSessionGate
+from voice_agent.contracts.ports import RetentionUnavailable
 from voice_agent.contracts.session import (
     CallState, CallStatus, DialNumber, EventEnvelope, OutboundCallRequest,
 )
+from voice_agent.infrastructure.retention import EncryptedRetention
 
 
 @dataclass(slots=True)
@@ -29,10 +31,12 @@ class OperatorCalls:
     """One in-memory control record; no number, transcript or audio is retained here."""
 
     def __init__(self, manager: OutboundCallManager | None,
-                 gate: SingleSessionGate, token: str) -> None:
+                 gate: SingleSessionGate, token: str,
+                 retention: EncryptedRetention | None = None) -> None:
         if not token:
             raise ValueError("operator access token is required")
         self.manager, self.gate, self.token = manager, gate, token
+        self.retention = retention
         self.current: _Call | None = None
 
     async def start(self, number: str) -> _Call:
@@ -112,6 +116,21 @@ def operator_router(service: OperatorCalls) -> APIRouter:
         if entry is None or entry.session_id != session_id:
             raise HTTPException(404, "call not found")
         return {"session_id": str(entry.session_id), "status": entry.status}
+
+    @router.get("/operator/inbound-calls")
+    async def inbound_calls(request: Request, limit: int = 50,
+                            offset: int = 0) -> dict[str, object]:
+        authorize(request)
+        if not 1 <= limit <= 100 or offset < 0:
+            raise HTTPException(422, "invalid call history page")
+        if service.retention is None:
+            raise HTTPException(503, "call history unavailable")
+        try:
+            return await asyncio.to_thread(
+                service.retention.list_inbound_calls, limit=limit, offset=offset,
+            )
+        except RetentionUnavailable:
+            raise HTTPException(503, "call history unavailable") from None
 
     @router.delete("/operator/calls/{session_id}", status_code=202)
     async def cancel_call(session_id: UUID, request: Request) -> Response:

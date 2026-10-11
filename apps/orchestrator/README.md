@@ -240,3 +240,9 @@ M4에서 작성하는 단위 테스트는 설치된 Python 환경에서 `python 
 - [ADR-007](../../docs/records/3_decisions/ADR-007-ht813-multiturn-call-lifecycle.md)
 - [ADR-008](../../docs/records/3_decisions/ADR-008-local-encrypted-retention.md)
 - [ADR-009](../../docs/records/3_decisions/ADR-009-ht813-all-inbound-agent.md)
+
+## 착신 이력 조회 (VOIC-FEAT-004)
+
+`VOICE_AGENT_HT813_CALLER_ID_HEADER`를 HT813의 `Caller ID Transport Type`과 일치하는 `from`, `p-asserted-identity`, `p-preferred-identity`, `disabled` 중 하나로 지정한다. 번호는 선택한 SIP 헤더에 7~15자리 숫자(선행 `+` 허용)가 있을 때만 저장하며 없으면 `null`이다. 이 값은 장비가 전달한 표시 정보이며 발신자 신원 인증 결과가 아니다.
+
+승인된 착신은 발화가 없어도 `VOICE_AGENT_CALLS_DIR`에 AES-GCM 통화 시작 기록을 남기고 종료 시 상태를 추가한다. 파일명은 무작위이며 시작 기록만 남은 통화는 `incomplete`다. 생성 30일 뒤 기록을 삭제한다. localhost와 `VOICE_AGENT_WEB_ACCESS_TOKEN` Bearer 인증을 통과한 `GET /operator/inbound-calls?limit=50&offset=0`은 최신순 `items`와 `next_offset`을 반환한다. 한 번에 최대 100건이며 각 항목은 `session_id`, `started_at`, `ended_at`, `status`, `caller_number`를 포함한다. 예전 통화의 번호·상태는 소급 생성하지 않는다.

@@ -18,10 +18,29 @@ from voice_agent.channels.ht813.sip import SIPMessage, parse_sip, request_bytes
 from voice_agent.channels.ht813.turns import TurnBoundary
 from voice_agent.contracts.flow import CancellationToken, SessionBusy, SessionLease, SingleSessionGate
 from voice_agent.contracts.media import AudioChunk, DtmfEvent
-from voice_agent.contracts.ports import EventSink, PhoneSessionRunner
+from voice_agent.contracts.ports import EventSink, PhoneSessionRunner, RetentionUnavailable
 from voice_agent.contracts.session import (
     CallState, CallStatus, Channel, EventEnvelope, SessionContext,
 )
+from voice_agent.infrastructure.retention import EncryptedRetention
+
+
+_CALLER_HEADERS = {
+    "from": "from",
+    "p-asserted-identity": "p-asserted-identity",
+    "p-preferred-identity": "p-preferred-identity",
+    "disabled": None,
+}
+
+
+def extract_caller_number(headers: dict[str, str], *, source: str,
+                          account_id: str) -> str | None:
+    """Read only the configured identity header; never infer a number from SIP routing."""
+    name = _CALLER_HEADERS[source]
+    value = headers.get(name, "") if name is not None else ""
+    match = re.search(r"(?:sip:|tel:)(\+?[0-9]{7,15})(?=@|[;>])", value, re.IGNORECASE)
+    number = match.group(1) if match else None
+    return number if number != account_id else None
 
 
 class _NullEvents:
@@ -74,6 +93,8 @@ class InboundSIPService:
         sip_port: int, rtp_port: int, user_id: str,
         runner: PhoneSessionRunner, gate: SingleSessionGate, boundary: TurnBoundary,
         events: EventSink | None = None,
+        retention: EncryptedRetention | None = None,
+        caller_id_header: str = "from",
         media_factory: Callable[..., RTPMedia] = RTPMedia,
         send_packet: Callable[[bytes, tuple[str, int]], Awaitable[None]] | None = None,
     ) -> None:
@@ -85,10 +106,14 @@ class InboundSIPService:
             raise ValueError("inbound SIP/RTP port is invalid")
         if not re.fullmatch(r"[A-Za-z0-9_.-]{1,64}", user_id):
             raise ValueError("invalid inbound SIP user ID")
+        if caller_id_header not in _CALLER_HEADERS:
+            raise ValueError("invalid caller ID header")
         self.peer = (peer_host, peer_port)
         self.local_host, self.sip_port, self.rtp_port = local_host, sip_port, rtp_port
         self.user_id, self.runner, self.gate, self.boundary = user_id, runner, gate, boundary
         self.events = events or _NullEvents()
+        self.retention = retention
+        self.caller_id_header = caller_id_header
         self._media_factory, self._send_packet = media_factory, send_packet
         self._socket: socket.socket | None = None
         self._reader: asyncio.Task[None] | None = None
@@ -251,6 +276,18 @@ class InboundSIPService:
                 await lease.release()
                 await self._send(self._response(invite, 503, "Service Unavailable"))
                 return
+            if self.retention is not None:
+                try:
+                    await self.retention.record_call_start(
+                        context, extract_caller_number(
+                            headers, source=self.caller_id_header, account_id=self.user_id,
+                        ),
+                    )
+                except RetentionUnavailable:
+                    await media.close()
+                    await lease.release()
+                    await self._send(self._response(invite, 503, "Service Unavailable"))
+                    return
             tag = secrets.token_hex(8)
             to_header = headers["to"] + f";tag={tag}"
             dialog = _Dialog(context, invite, lease, media,
@@ -392,7 +429,15 @@ class InboundSIPService:
                 CallState(CallStatus.ENDED if normal else CallStatus.FAILED),
             ))
         finally:
-            await dialog.lease.release()
+            try:
+                if self.retention is not None:
+                    await self.retention.record_call_end(
+                        dialog.context, "ended" if normal else "failed",
+                    )
+            except RetentionUnavailable:
+                pass
+            finally:
+                await dialog.lease.release()
 
     async def close(self) -> None:
         if self._reader is not None:
