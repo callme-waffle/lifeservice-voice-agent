@@ -4,7 +4,7 @@
 |---|---|
 |계획 ID|VOIC-FEAT-004-plan|
 |원본 이슈|[VOIC-FEAT-004](../0_issues/VOIC-FEAT-004.md)|
-|상태|approved|
+|상태|executed|
 |작성 시간|2026-10-11 08:11:06 UTC|
 |작성 에이전트|Codex|
 |승인자|사용자 — “나머지 작업들을 이어 진행하세요”|
@@ -183,6 +183,7 @@ HT813 Caller ID 전송 방식별 파싱, 계정 ID 오인 방지, 메타데이�
 - 통합 테스트 필요 여부 검토 결과: 필요
 - 검토 사유: SIP 착신→암호화 파일→HTTP 목록 조회의 컴포넌트 경계가 핵심 기능이다.
 - 사전승인 (Gate 1): 사용자 2026-10-11 계속 진행 지시로 승인. 합성 데이터 통합 시험 실행 직전 Gate 2는 별도로 확인한다.
+- 최종승인 (Gate 2): 사용자 2026-10-11 “두 기능의 합성 통합 시험 승인”. 실제 전화·외부 작업 API는 제외한다.
 - 대상 시나리오: 합성 SIP 착신의 번호·번호 없음·정상 종료를 기록하고 인증된 API에서 조회, 만료 뒤 제외한다. 실전화는 제외한다.
 
 ---
@@ -195,11 +196,11 @@ HT813 Caller ID 전송 방식별 파싱, 계정 ID 오인 방지, 메타데이�
 
 # 8. 완료 게이트
 
-- [ ] 모든 마일스톤 검증 통과
-- [ ] 관련 테스트 실행 및 통과
-- [ ] 실행 로그 기록 (`docs/records/2_logs/`)
-- [ ] 관련 문서(README/guides) 갱신
-- [ ] `feat/inbound-call-history`의 PR 생성
+- [x] 모든 마일스톤 검증 통과
+- [x] 관련 테스트 실행 및 통과
+- [x] 실행 로그 기록 (`docs/records/2_logs/`)
+- [x] 관련 문서(README/guides) 갱신
+- [x] `feat/inbound-call-history`의 [PR #1](https://github.com/callme-waffle/lifeservice-voice-agent/pull/1) 생성
 
 ---
 

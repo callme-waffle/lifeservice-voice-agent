@@ -28,7 +28,7 @@ _EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
 class EncryptedRetention:
     def __init__(
         self, *, recordings_dir: Path, transcripts_dir: Path, audit_path: Path,
-        key: bytes, sweep_interval_s: int = 3600,
+        key: bytes, calls_dir: Path | None = None, sweep_interval_s: int = 3600,
         clock: Callable[[], datetime] | None = None,
         sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
     ) -> None:
@@ -38,6 +38,7 @@ class EncryptedRetention:
             raise ValueError("retention sweep interval must be 60..86400 seconds")
         self.recordings_dir = Path(recordings_dir)
         self.transcripts_dir = Path(transcripts_dir)
+        self.calls_dir = Path(calls_dir) if calls_dir is not None else self.transcripts_dir.parent / "calls"
         self.audit_path = Path(audit_path)
         self._aes = AESGCM(key)
         self._clock = clock or (lambda: datetime.now(timezone.utc))
@@ -77,7 +78,8 @@ class EncryptedRetention:
             raise RetentionUnavailable("retention directory permissions are too broad")
 
     def _prepare(self) -> None:
-        for path in (self.recordings_dir, self.transcripts_dir, self.audit_path.parent):
+        for path in (self.recordings_dir, self.transcripts_dir, self.calls_dir,
+                     self.audit_path.parent):
             self._private_dir(path)
         if self.audit_path.is_symlink():
             raise RetentionUnavailable("deletion audit is a symlink")
@@ -212,6 +214,67 @@ class EncryptedRetention:
         except OSError:
             raise RetentionUnavailable("invalid retention artifact") from None
 
+    async def record_call_start(self, context: SessionContext,
+                                caller_number: str | None) -> Path:
+        """Record an accepted inbound call even when no speech turn occurs."""
+        return await self._record(self.calls_dir, {
+            "kind": "call_event", "event": "started",
+            "session_id": str(context.session_id), "caller_number": caller_number,
+        })
+
+    async def record_call_end(self, context: SessionContext, status: str) -> Path:
+        if status not in ("ended", "failed"):
+            raise ValueError("invalid call status")
+        return await self._record(self.calls_dir, {
+            "kind": "call_event", "event": status,
+            "session_id": str(context.session_id),
+        })
+
+    def list_inbound_calls(self, *, limit: int = 50, offset: int = 0) -> dict[str, object]:
+        """Return bounded newest-first call metadata without exposing file paths."""
+        if not 1 <= limit <= 100 or offset < 0:
+            raise ValueError("invalid call history page")
+        if not self.ready:
+            raise RetentionUnavailable("retention is unavailable")
+        starts: dict[str, tuple[datetime, str | None]] = {}
+        ends: dict[str, tuple[datetime, str]] = {}
+        now = self._now()
+        for path in self.calls_dir.glob("*.va1"):
+            created, payload = self.read_artifact(path)
+            if self.expired(created, now):
+                continue
+            try:
+                if payload.get("kind") != "call_event":
+                    raise ValueError
+                session_id = str(UUID(str(payload["session_id"])))
+                event = payload["event"]
+                if event == "started":
+                    caller_number = payload["caller_number"]
+                    if caller_number is not None and not isinstance(caller_number, str):
+                        raise ValueError
+                    if session_id not in starts or starts[session_id][0] < created:
+                        starts[session_id] = (created, caller_number)
+                elif event in ("ended", "failed"):
+                    if session_id not in ends or ends[session_id][0] < created:
+                        ends[session_id] = (created, event)
+                else:
+                    raise ValueError
+            except (KeyError, TypeError, ValueError):
+                raise RetentionUnavailable("invalid call history artifact") from None
+        rows = []
+        for session_id, (started, caller_number) in starts.items():
+            end = ends.get(session_id)
+            rows.append({
+                "session_id": session_id, "started_at": started.isoformat(),
+                "ended_at": end[0].isoformat() if end else None,
+                "status": end[1] if end else "incomplete",
+                "caller_number": caller_number,
+            })
+        rows.sort(key=lambda item: (item["started_at"], item["session_id"]), reverse=True)
+        page = rows[offset:offset + limit]
+        next_offset = offset + limit if offset + limit < len(rows) else None
+        return {"items": page, "next_offset": next_offset}
+
     def list_conversation(self, session_id: UUID) -> dict[str, object]:
         """Read retained final text for one call; never take a caller-supplied file path."""
         if not self.ready:
@@ -270,7 +333,8 @@ class EncryptedRetention:
         deleted = 0
         failed = False
         for directory, kind in ((self.recordings_dir, "audio"),
-                                (self.transcripts_dir, "text")):
+                                (self.transcripts_dir, "text"),
+                                (self.calls_dir, "call")):
             for path in directory.glob("*.va1"):
                 identifier = path.stem
                 try:
@@ -294,7 +358,7 @@ class EncryptedRetention:
                 deleted += 1
         # An interrupted atomic write can leave ciphertext in a hidden temporary file.
         # Never remove a possibly active writer's file during the first hour.
-        for directory in (self.recordings_dir, self.transcripts_dir):
+        for directory in (self.recordings_dir, self.transcripts_dir, self.calls_dir):
             for path in directory.glob(".*.tmp"):
                 try:
                     modified = datetime.fromtimestamp(path.stat().st_mtime, timezone.utc)

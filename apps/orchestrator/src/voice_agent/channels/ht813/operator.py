@@ -130,6 +130,21 @@ def operator_router(service: OperatorCalls) -> APIRouter:
             raise HTTPException(404, "conversation not found")
         return result
 
+    @router.get("/operator/inbound-calls")
+    async def inbound_calls(request: Request, limit: int = 50,
+                            offset: int = 0) -> dict[str, object]:
+        authorize(request)
+        if not 1 <= limit <= 100 or offset < 0:
+            raise HTTPException(422, "invalid call history page")
+        if service.retention is None:
+            raise HTTPException(503, "call history unavailable")
+        try:
+            return await asyncio.to_thread(
+                service.retention.list_inbound_calls, limit=limit, offset=offset,
+            )
+        except RetentionUnavailable:
+            raise HTTPException(503, "call history unavailable") from None
+
     @router.delete("/operator/calls/{session_id}", status_code=202)
     async def cancel_call(session_id: UUID, request: Request) -> Response:
         authorize(request)

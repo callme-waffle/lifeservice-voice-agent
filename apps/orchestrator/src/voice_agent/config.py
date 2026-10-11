@@ -71,8 +71,10 @@ class Settings:
     ht813_inbound_enabled: bool
     ht813_inbound_sip_port: int
     ht813_inbound_rtp_port: int
+    ht813_caller_id_header: str
     recordings_dir: Path
     transcripts_dir: Path
+    calls_dir: Path
     deletion_audit_path: Path
     retention_sweep_interval_s: int
     data_encryption_key: bytes = field(repr=False)
@@ -158,6 +160,10 @@ class Settings:
         if inbound_value not in ("true", "false"):
             raise ValueError("invalid VOICE_AGENT_HT813_INBOUND_ENABLED")
         inbound_enabled = inbound_value == "true"
+        caller_id_header = env.get("VOICE_AGENT_HT813_CALLER_ID_HEADER", "from").lower()
+        if caller_id_header not in ("from", "p-asserted-identity",
+                                    "p-preferred-identity", "disabled"):
+            raise ValueError("invalid VOICE_AGENT_HT813_CALLER_ID_HEADER")
         ht_port = _number(env, "VOICE_AGENT_HT813_FXO_SIP_PORT", "5062", int)
         sip_port = _number(env, "VOICE_AGENT_HT813_LOCAL_SIP_PORT", "5060", int)
         rtp_port = _number(env, "VOICE_AGENT_HT813_LOCAL_RTP_PORT", "4000", int)
@@ -188,8 +194,10 @@ class Settings:
             ht813_inbound_enabled=inbound_enabled,
             ht813_inbound_sip_port=inbound_sip_port,
             ht813_inbound_rtp_port=inbound_rtp_port,
+            ht813_caller_id_header=caller_id_header,
             recordings_dir=Path(env.get("VOICE_AGENT_RECORDINGS_DIR", "./data/recordings")),
             transcripts_dir=Path(env.get("VOICE_AGENT_TRANSCRIPTS_DIR", "./data/transcripts")),
+            calls_dir=Path(env.get("VOICE_AGENT_CALLS_DIR", "./data/calls")),
             deletion_audit_path=Path(env.get("VOICE_AGENT_DELETION_AUDIT_LOG", "./data/deletion-audit.jsonl")),
             retention_sweep_interval_s=sweep_interval,
             data_encryption_key=data_key,
