@@ -6,6 +6,7 @@ import asyncio
 import base64
 import json
 import os
+import stat
 import struct
 from collections.abc import Awaitable, Callable
 from datetime import datetime, timedelta, timezone
@@ -200,7 +201,48 @@ class EncryptedRetention:
         })
 
     def read_artifact(self, path: Path) -> tuple[datetime, dict[str, object]]:
-        return self.decode_artifact(Path(path).read_bytes())
+        flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
+        try:
+            fd = os.open(path, flags)
+            with os.fdopen(fd, "rb") as stream:
+                mode = os.fstat(stream.fileno()).st_mode
+                if not stat.S_ISREG(mode) or mode & 0o077:
+                    raise RetentionUnavailable("invalid retention artifact")
+                return self.decode_artifact(stream.read())
+        except OSError:
+            raise RetentionUnavailable("invalid retention artifact") from None
+
+    def list_conversation(self, session_id: UUID) -> dict[str, object]:
+        """Read retained final text for one call; never take a caller-supplied file path."""
+        if not self.ready:
+            raise RetentionUnavailable("retention is unavailable")
+        now = self._now()
+        turns: list[dict[str, object]] = []
+        for path in self.transcripts_dir.glob("*.va1"):
+            created, payload = self.read_artifact(path)
+            if self.expired(created, now):
+                continue
+            try:
+                artifact_session = UUID(str(payload["session_id"]))
+                kind = payload["kind"]
+                turn_index = payload["turn_index"]
+                value = payload["text"]
+                if (kind not in ("transcript", "response")
+                        or not isinstance(turn_index, int) or isinstance(turn_index, bool)
+                        or turn_index < 0 or not isinstance(value, str) or not value.strip()):
+                    raise ValueError
+            except (KeyError, TypeError, ValueError):
+                raise RetentionUnavailable("invalid conversation artifact") from None
+            if artifact_session == session_id:
+                turns.append({
+                    "turn_index": turn_index,
+                    "speaker": "user" if kind == "transcript" else "assistant",
+                    "text": value,
+                    "created_at": created.isoformat(),
+                })
+        turns.sort(key=lambda item: (item["turn_index"], item["created_at"],
+                                     item["speaker"] != "user"))
+        return {"session_id": str(session_id), "turns": turns}
 
     @staticmethod
     def expired(created: datetime, now: datetime) -> bool:

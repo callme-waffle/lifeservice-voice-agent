@@ -103,3 +103,35 @@ async def test_voic_feat_001_m6_s1_t4_operator_asgi_smoke_without_device():
         await service.close()
     assert gate.active_session_id is None
     assert manager.calls == 1
+
+
+@pytest.mark.asyncio
+async def test_voic_feat_005_m8_s2_t2_conversation_requires_local_auth_and_valid_id():
+    """Given a stored conversation, when queried, then only a local authorized UUID can read it."""
+    import httpx
+    from fastapi import FastAPI
+
+    session_id = uuid4()
+
+    class Store:
+        def list_conversation(self, requested):
+            assert requested == session_id
+            return {"session_id": str(requested), "turns": [{"turn_index": 0,
+                    "speaker": "user", "text": "합성 질문", "created_at": "2026-10-11T00:00:00+00:00"}]}
+
+    app = FastAPI()
+    app.include_router(operator_router(OperatorCalls(None, SingleSessionGate(),
+                                                     "test-only-token", Store())))
+    path = f"/operator/calls/{session_id}/conversation"
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app, client=("127.0.0.1", 1)),
+                                 base_url="http://localhost") as client:
+        assert (await client.get(path)).status_code == 401
+        assert (await client.get("/operator/calls/invalid/conversation",
+                                 headers={"Authorization": "Bearer test-only-token"})).status_code == 422
+        response = await client.get(path, headers={"Authorization": "Bearer test-only-token"})
+        assert response.status_code == 200
+        assert response.json()["turns"][0]["text"] == "합성 질문"
+
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app, client=("192.0.2.4", 1)),
+                                 base_url="http://localhost") as remote:
+        assert (await remote.get(path, headers={"Authorization": "Bearer test-only-token"})).status_code == 403

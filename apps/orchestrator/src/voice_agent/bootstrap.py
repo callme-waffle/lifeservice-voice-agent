@@ -68,7 +68,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     ) if settings.ht813_inbound_enabled else None
 
     calls = OperatorCalls(OutboundCallManager(outbound, runner, gate, settings.turn_boundary)
-                          if outbound is not None else None, gate, settings.web_token)
+                          if outbound is not None else None, gate, settings.web_token,
+                          retention)
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
