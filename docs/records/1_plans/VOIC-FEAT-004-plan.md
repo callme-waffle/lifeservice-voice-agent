@@ -4,7 +4,7 @@
 |---|---|
 |계획 ID|VOIC-FEAT-004-plan|
 |원본 이슈|[VOIC-FEAT-004](../0_issues/VOIC-FEAT-004.md)|
-|상태|approved|
+|상태|executed|
 |작성 시간|2026-10-11 08:11:06 UTC|
 |작성 에이전트|Codex|
 |승인자|사용자 — “나머지 작업들을 이어 진행하세요”|
@@ -196,11 +196,11 @@ HT813 Caller ID 전송 방식별 파싱, 계정 ID 오인 방지, 메타데이�
 
 # 8. 완료 게이트
 
-- [ ] 모든 마일스톤 검증 통과
-- [ ] 관련 테스트 실행 및 통과
-- [ ] 실행 로그 기록 (`docs/records/2_logs/`)
-- [ ] 관련 문서(README/guides) 갱신
-- [ ] `feat/inbound-call-history`의 PR 생성
+- [x] 모든 마일스톤 검증 통과
+- [x] 관련 테스트 실행 및 통과
+- [x] 실행 로그 기록 (`docs/records/2_logs/`)
+- [x] 관련 문서(README/guides) 갱신
+- [x] `feat/inbound-call-history`의 [PR #1](https://github.com/callme-waffle/lifeservice-voice-agent/pull/1) 생성
 
 ---
 
