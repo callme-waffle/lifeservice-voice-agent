@@ -1,0 +1,1 @@
+"""Stable inter-module contracts."""

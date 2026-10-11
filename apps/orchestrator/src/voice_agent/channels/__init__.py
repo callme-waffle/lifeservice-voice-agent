@@ -1,0 +1,1 @@
+"""External voice-channel adapters."""

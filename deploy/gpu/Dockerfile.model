@@ -1,0 +1,33 @@
+FROM python:3.11-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/opt/voice-agent/apps/orchestrator/src:/opt/voice-agent/apps/model-serving/src \
+    LD_LIBRARY_PATH=/usr/local/lib/python3.11/site-packages/nvidia/cublas/lib:/usr/local/lib/python3.11/site-packages/nvidia/cudnn/lib:/usr/local/lib/python3.11/site-packages/nvidia/cuda_runtime/lib
+WORKDIR /opt/voice-agent
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ffmpeg libgomp1 libsndfile1 && rm -rf /var/lib/apt/lists/*
+RUN python -m pip install --no-cache-dir \
+    'torch==2.3.1+cu121' 'torchaudio==2.3.1+cu121' 'torchvision==0.18.1+cu121' \
+    --index-url https://download.pytorch.org/whl/cu121
+COPY apps/orchestrator/pyproject.toml /tmp/orchestrator-pyproject.toml
+RUN python -m pip install --no-cache-dir \
+    'fastapi>=0.141,<0.142' 'uvicorn>=0.30,<1' 'pydantic>=2.12,<3' \
+    'httpx>=0.28,<0.29' 'cryptography>=41,<51' \
+    'opentelemetry-api>=1.30,<2' 'opentelemetry-sdk>=1.30,<2' \
+    'opentelemetry-exporter-otlp-proto-http>=1.30,<2' \
+    'opentelemetry-instrumentation-fastapi>=0.51b0,<1' \
+    'prometheus-client>=0.20,<1'
+RUN apt-get update && apt-get install -y --no-install-recommends patchelf && rm -rf /var/lib/apt/lists/*
+ARG MODEL_KIND
+RUN if [ "$MODEL_KIND" = stt ]; then \
+      python -m pip install --no-cache-dir 'faster-whisper==1.2.1' 'ctranslate2==4.4.0'; \
+      patchelf --clear-execstack /usr/local/lib/python3.11/site-packages/ctranslate2.libs/libctranslate2-*.so*; \
+      python -c 'import ctranslate2'; \
+    elif [ "$MODEL_KIND" = tts ]; then \
+      python -m pip install --no-cache-dir 'https://github.com/myshell-ai/MeloTTS/archive/209145371cff8fc3bd60d7be902ea69cbdb7965a.tar.gz'; \
+      python -m unidic download; \
+    else exit 1; fi
+COPY apps/orchestrator/src apps/orchestrator/src
+COPY apps/model-serving/src apps/model-serving/src
+CMD ["uvicorn", "voice_models.server:app", "--host", "127.0.0.1", "--port", "8101"]

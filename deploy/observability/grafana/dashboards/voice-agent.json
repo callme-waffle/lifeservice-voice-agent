@@ -1,0 +1,32 @@
+{
+  "uid": "voice-agent-latency-gpu",
+  "title": "Voice Agent: 지연 및 GPU",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "10s",
+  "time": {"from": "now-1h", "to": "now"},
+  "panels": [
+    {
+      "id": 1, "type": "timeseries", "title": "STT / 작업 API / TTS 추론 p95 지연 (초)",
+      "datasource": {"type": "prometheus", "uid": "voice-prometheus"},
+      "gridPos": {"h": 9, "w": 24, "x": 0, "y": 0},
+      "targets": [{"refId": "A", "expr": "histogram_quantile(0.95, sum by (le, stage) (rate(voice_stage_duration_seconds_bucket{stage=~\"model_stt|task_api|model_tts\"}[5m])))", "legendFormat": "{{stage}}"}],
+      "fieldConfig": {"defaults": {"unit": "s"}, "overrides": []}
+    },
+    {
+      "id": 2, "type": "timeseries", "title": "GPU 사용률 (%)",
+      "datasource": {"type": "prometheus", "uid": "voice-prometheus"},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 9},
+      "targets": [{"refId": "A", "expr": "voice_gpu_utilization_percent", "legendFormat": "GPU {{gpu}}"}],
+      "fieldConfig": {"defaults": {"unit": "percent", "min": 0, "max": 100}, "overrides": []}
+    },
+    {
+      "id": 3, "type": "timeseries", "title": "GPU 메모리 사용량 (GiB)",
+      "datasource": {"type": "prometheus", "uid": "voice-prometheus"},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 9},
+      "targets": [{"refId": "A", "expr": "voice_gpu_memory_used_bytes", "legendFormat": "GPU {{gpu}}"}],
+      "fieldConfig": {"defaults": {"unit": "bytes"}, "overrides": []}
+    }
+  ],
+  "annotations": {"list": []}
+}

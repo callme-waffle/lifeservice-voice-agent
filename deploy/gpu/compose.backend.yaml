@@ -1,0 +1,53 @@
+services:
+  backend:
+    build:
+      context: ../..
+      dockerfile: deploy/gpu/Dockerfile.backend
+    network_mode: host
+    restart: unless-stopped
+    depends_on:
+      stt: {condition: service_healthy}
+      tts: {condition: service_healthy}
+    environment:
+      VOICE_AGENT_STT_ENDPOINT: http://127.0.0.1:8101
+      VOICE_AGENT_TTS_ENDPOINT: http://127.0.0.1:8102
+      VOICE_AGENT_METRICS_HOST: ${VOICE_AGENT_GPU_HOST:?required}
+      VOICE_AGENT_METRICS_PORT: "8001"
+      OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: http://${OBSERVABILITY_HOST:?required}:4318/v1/traces
+      VOICE_AGENT_STT_MODEL_ID: ${VOICE_AGENT_STT_MODEL_ID:-small}
+      VOICE_AGENT_TTS_SPEED: ${VOICE_AGENT_TTS_SPEED:-1.25}
+      VOICE_AGENT_TASK_API_KEY_FILE: /run/secrets/task_api_key
+      VOICE_AGENT_TASK_API_BASE_URL: ${VOICE_AGENT_TASK_API_BASE_URL:?required}
+      VOICE_AGENT_TASK_APPROVED_HOST: ${VOICE_AGENT_TASK_APPROVED_HOST:?required}
+      VOICE_AGENT_TASK_MODEL: ${VOICE_AGENT_TASK_MODEL:?required}
+      VOICE_AGENT_WEB_ACCESS_TOKEN_FILE: /run/secrets/web_access_token
+      VOICE_AGENT_DATA_ENCRYPTION_KEY_FILE: /run/secrets/data_encryption_key
+      VOICE_AGENT_HT813_HOST: ${VOICE_AGENT_HT813_HOST:?required}
+      VOICE_AGENT_HT813_LOCAL_IPV4: ${VOICE_AGENT_HT813_LOCAL_IPV4:?required}
+      VOICE_AGENT_HT813_SIP_USER_ID: ${VOICE_AGENT_HT813_SIP_USER_ID:?required}
+      VOICE_AGENT_HT813_ALLOWED_EXACT: ${VOICE_AGENT_HT813_ALLOWED_EXACT:-}
+      VOICE_AGENT_HT813_INBOUND_ENABLED: ${VOICE_AGENT_HT813_INBOUND_ENABLED:-false}
+      VOICE_AGENT_RECORDINGS_DIR: /data/recordings
+      VOICE_AGENT_TRANSCRIPTS_DIR: /data/transcripts
+      VOICE_AGENT_DELETION_AUDIT_LOG: /data/deletion-audit.jsonl
+    volumes:
+      - ${VOICE_AGENT_DATA_DIR:?required}:/data
+    secrets:
+      - task_api_key
+      - web_access_token
+      - data_encryption_key
+    command: ["uvicorn", "voice_agent.main:app", "--host", "127.0.0.1", "--port", "8000"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import json,urllib.request; assert json.load(urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=5))['status']=='ready'"]
+      interval: 10s
+      timeout: 7s
+      retries: 3
+      start_period: 30s
+
+secrets:
+  task_api_key:
+    file: ${VOICE_AGENT_SECRETS_DIR:?required}/task_api_key
+  web_access_token:
+    file: ${VOICE_AGENT_SECRETS_DIR:?required}/web_access_token
+  data_encryption_key:
+    file: ${VOICE_AGENT_SECRETS_DIR:?required}/data_encryption_key

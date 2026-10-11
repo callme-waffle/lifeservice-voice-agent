@@ -1,0 +1,1 @@
+"""Asterisk voice channel."""

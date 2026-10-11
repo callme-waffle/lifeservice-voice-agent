@@ -1,0 +1,6 @@
+FROM python:3.11-slim
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
+WORKDIR /opt/voice-agent
+COPY apps/orchestrator /opt/voice-agent/apps/orchestrator
+RUN python -m pip install --no-cache-dir /opt/voice-agent/apps/orchestrator
+CMD ["uvicorn", "voice_agent.main:app", "--host", "127.0.0.1", "--port", "8000"]

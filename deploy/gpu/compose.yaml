@@ -1,0 +1,58 @@
+name: voice-agent-gpu
+services:
+  stt:
+    build:
+      context: ../..
+      dockerfile: deploy/gpu/Dockerfile.model
+      args: {MODEL_KIND: stt}
+    network_mode: host
+    gpus: all
+    restart: unless-stopped
+    environment:
+      MODEL_KIND: stt
+      VOICE_AGENT_STT_MODEL_ID: ${VOICE_AGENT_STT_MODEL_ID:-small}
+      MODEL_METRICS_HOST: ${VOICE_AGENT_GPU_HOST:?required}
+      MODEL_METRICS_PORT: "8103"
+      OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: http://${OBSERVABILITY_HOST:?required}:4318/v1/traces
+    command: ["uvicorn", "voice_models.server:app", "--host", "127.0.0.1", "--port", "8101"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8101/ready', timeout=2)"]
+      interval: 5s
+      timeout: 3s
+      retries: 60
+      start_period: 180s
+
+  tts:
+    build:
+      context: ../..
+      dockerfile: deploy/gpu/Dockerfile.model
+      args: {MODEL_KIND: tts}
+    network_mode: host
+    gpus: all
+    restart: unless-stopped
+    depends_on:
+      stt: {condition: service_healthy}
+    environment:
+      MODEL_KIND: tts
+      VOICE_AGENT_TTS_SPEED: ${VOICE_AGENT_TTS_SPEED:-1.25}
+      TTS_START_DELAY_SECONDS: ${TTS_START_DELAY_SECONDS:-30}
+      MODEL_METRICS_HOST: ${VOICE_AGENT_GPU_HOST:?required}
+      MODEL_METRICS_PORT: "8104"
+      OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: http://${OBSERVABILITY_HOST:?required}:4318/v1/traces
+    command: ["sh", "-c", "sleep \"$$TTS_START_DELAY_SECONDS\"; exec uvicorn voice_models.server:app --host 127.0.0.1 --port 8102"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8102/ready', timeout=2)"]
+      interval: 5s
+      timeout: 3s
+      retries: 60
+      start_period: 180s
+
+  gpu-exporter:
+    build:
+      context: ../..
+      dockerfile: deploy/gpu/Dockerfile.exporter
+    network_mode: host
+    gpus: all
+    environment:
+      NVIDIA_DRIVER_CAPABILITIES: utility,compute
+    restart: unless-stopped

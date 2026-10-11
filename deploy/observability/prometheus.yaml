@@ -1,0 +1,16 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+scrape_configs:
+  - job_name: voice-backend
+    file_sd_configs:
+      - files: [/etc/prometheus/targets/voice-backend.json]
+  - job_name: voice-stt
+    file_sd_configs:
+      - files: [/etc/prometheus/targets/voice-stt.json]
+  - job_name: voice-tts
+    file_sd_configs:
+      - files: [/etc/prometheus/targets/voice-tts.json]
+  - job_name: voice-gpu
+    file_sd_configs:
+      - files: [/etc/prometheus/targets/voice-gpu.json]

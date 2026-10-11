@@ -1,0 +1,4 @@
+FROM python:3.11-slim
+WORKDIR /opt/voice-agent
+COPY scripts/gpu_metrics_exporter.py /opt/voice-agent/gpu_metrics_exporter.py
+CMD ["python", "gpu_metrics_exporter.py"]
