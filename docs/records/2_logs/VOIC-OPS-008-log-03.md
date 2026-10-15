@@ -109,4 +109,6 @@ Git push는 HTTPS 자격 증명 부재로 실패했다. 비밀 탐색 없이 Git
 
 수정된 P2는 (1) 기존 retention 시작 스윕의 AEAD 키 인증 보호를 설명하고 빈/잘못 마운트된 경로의 한계로 좁힘, (2) 복원 시 착신 시작 누락은 목록 없음·전체 텍스트 누락은 404임을 명시하고 백업 목록·수량·무결성 대조를 요구한 것이다. 실행 코드 변경은 없어 단위 시험 재실행은 하지 않았다. 긴 합성 PCM 매개변수의 시험 이름은 함수명+이름 해시로 줄여 케이스별 120건 결과를 보존했다.
 
-최종 검사: Markdown 19개·상대 링크 174개 누락 0건, PRD/SRS 각각 단독 커밋, 기준 대비 앱/배포/시험 코드 무변경, 커밋의 AI 공동저자 표기 없음, 120+3개 케이스 결과 일치를 확인했다. 전체 diff 공백 검사에서 subagent STATUS의 EOF 빈 줄 1건을 발견해 제거한 뒤 재검사했다. 동일 원격 트리로 게시한 뒤 MR의 head/base·draft 해제·미병합을 재확인한다. 결과 HEAD의 자체 해시를 같은 커밋 본문에 넣을 수 없으므로 MR metadata와 Git 이력을 최종 식별자로 사용한다.
+최종 검사: Markdown 19개·상대 링크 174개 누락 0건, PRD/SRS 각각 단독 커밋, 기준 대비 앱/배포/시험 코드 무변경, 커밋의 AI 공동저자 표기 없음, 120+3개 케이스 결과 일치를 확인했다. 전체 diff 공백 검사에서 requirements-audit 및 최종 게시 뒤 independent-review STATUS의 EOF 빈 줄을 각 1건 발견해 제거하고 재검사했다. 동일 원격 트리로 게시한 뒤 MR의 head/base·draft 해제·미병합을 재확인한다. 결과 HEAD의 자체 해시를 같은 커밋 본문에 넣을 수 없으므로 MR metadata와 Git 이력을 최종 식별자로 사용한다.
+
+게시 검증: 본문·설계 최종 검증 head `94c32c365d3b10c885fd1bc46303e11b6e92909f`, tree `1975560806e212849d47d2375dc4d909e4e73b7f`의 로컬/원격 동일성을 확인했다. 이후 변경은 independent-review STATUS의 EOF 공백 제거와 이 로그 보완뿐이며 최종 MR head는 이 보완 커밋으로 갱신한다. MR은 open·draft=false·merged=false·mergeable=true였고 GitHub commit statuses는 빈 목록이었다. 이는 원격 CI 통과를 뜻하지 않는다. 로컬 검증 커밋은 `codex/ops008-m9-local-evidence`에 보존하고 전용 worktree는 동일 트리의 원격 게시 이력으로 정렬했다. 부모 관리 브랜치·미추적 파일은 그대로다.
