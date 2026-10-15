@@ -103,3 +103,15 @@ M10 준비·구체 실행안 작성 상태이며 실제 사용 흐름 완결은 
 - 독립 검토의 공통 통화 ID 전달 지적과 빌드 경로·원복 중지/부재 분기·watchdog·실제 페이지 표본·시험 중복을 수정했다. 두 검토자가 재확인 후 검토 범위 내 미해결 0건으로 보고했다.
 - 원복 `up --no-start` 및 `rm`의 볼륨 보존 의미는 [Docker up](https://docs.docker.com/reference/cli/docker/compose/up/)·[Docker rm](https://docs.docker.com/reference/cli/docker/compose/rm/) 공식 문서로 확인했다. 현장 Compose 버전·실행 결과는 미확인이다.
 - PRD/SRS는 각각 독립 커밋하며 나머지 준비 문서와 섞지 않는다. GitHub 게시 트리는 로컬 검증 트리와 비교하고 MR에 연결한다.
+
+## 게시 추적
+
+[M10 실행안 MR #4](https://github.com/callme-waffle/lifeservice-voice-agent/pull/4)를 2026-10-16 01:41:17 KST에 draft로 생성해 이 채팅에 연결했다. base는 dev/v0.0.1 / f1c2088이다. GitHub 연결로 게시했으며 로컬과 원격의 각 tree SHA를 대조했다. 작성자/시각 차이에 따른 commit SHA 차이만 있고 파일 내용·모드는 같다. 로컬 이력은 그대로 보존하고 부모 이력을 게시하지 않았다.
+
+|작업|로컬 검증 커밋|동일 트리 원격 커밋|
+|---|---|---|
+|PRD 단독|8938c616c67d0998f014bf6d73a14542a37bba85|c9d2a9963ba6b5703ef184623448c3e0e594a9b3|
+|SRS 단독|06f9fa62b10ad75564f4981c570aadedd93277db|6f46649e23a00f05ffb7dc6e32acdea9908b3476|
+|실행안·정적 증거|76cb5b9822c6aa368ce35721d8a7952b1c74fb77|bce6334a4eb6590c2e75b2fc2acd01a9177eef4a|
+
+본문 검증 tree는 `da70160a71d98b53f8aa4690868e7f8a18a60813`이다. 이후 변경은 본 게시 기록과 M10 STATUS에 MR 링크를 추가하는 문서 커밋뿐이다. 최종 head는 이 기록을 포함한 MR metadata로 식별한다. 현재 Gate 2 미승인·현장 입력 대기·결과 MR 없음·M10 미완료 상태를 유지한다. 부모 직접 메시지 대신 이 로그와 MR을 조회할 수 있게 남겼다.

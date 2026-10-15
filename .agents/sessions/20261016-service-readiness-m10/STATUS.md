@@ -33,7 +33,7 @@ M9 STATUS/log-03의 병합 대기 표기는 당시 상태다. 현재 GitHub MR #
 
 ## 5. Current Work
 
-문서 최종 검증 완료·커밋·draft MR 게시. 게시 결과는 아래 추적에 기록한다. 사용자에게 현장 일정/역할/FXS·PSTN과 기존 SSH 별칭/배포 디렉터리를 질문했으며 아직 응답이 없다.
+문서 검증·커밋·draft MR #4 게시 완료. 게시 결과는 아래 추적에 기록했다. 사용자에게 현장 일정/역할/FXS·PSTN과 기존 SSH 별칭/배포 디렉터리를 질문했으며 아직 응답이 없다.
 
 ## 6. Verification State
 
@@ -58,3 +58,10 @@ M9 STATUS/log-03의 병합 대기 표기는 당시 상태다. 현재 GitHub MR #
 담당 thread `01a1405f-3b4b-7ef2-81cb-016c3a52beb4`; host `remote-ssh-codex-managed:0535a69a-75b5-4b00-a34d-40c89933dcba`. 부모 `01a14007-f09a-7f43-a8c2-253563abfe26`, M9 `01a14026-e634-7fa3-b392-958f75b2b8e0`와 별개임을 list_threads로 확인했다. send_message_to_thread 미제공으로 직접 송신하지 않았으며 부모가 STATUS/로그/MR을 조회할 수 있다.
 
 실행안 승인 SHA/시각 없음, 결과 MR 없음. M10 결과 MR 병합 후에만 HANDOFF-PROMPT.md로 새 독립 M11 채팅에 인계하며 본 채팅은 M11을 실행하지 않는다. 에이전트 merge/auto-merge 금지. 실제 번호·키·토큰·원문은 공유 기록에 넣지 않는다.
+
+## MR / 게시 추적
+
+- [실행안 MR #4](https://github.com/callme-waffle/lifeservice-voice-agent/pull/4): open, draft, 미병합. 생성 2026-10-16 01:41:17 KST. 이 채팅에 연결했다.
+- 본문 로컬 커밋 `76cb5b9822c6aa368ce35721d8a7952b1c74fb77` / 동일 트리 원격 `bce6334a4eb6590c2e75b2fc2acd01a9177eef4a`; 공통 tree `da70160a71d98b53f8aa4690868e7f8a18a60813`.
+- PRD/SRS 독립 커밋별 대응은 log-05에 기록했다. 이후 변경은 게시 기록·이 STATUS뿐이며 최종 SHA는 MR head metadata다. 로컬/원격 commit SHA가 다르므로 원격 ref에 로컬 이력을 강제 push하지 않는다.
+- 준비 작업 게시 완료. 다음 행동은 사용자 현장/접속 입력 반영이다. Gate 2 승인 SHA/시각 없음. 실제 시험·배포·실전화 미실행. 서비스 개시 완료 아님.
