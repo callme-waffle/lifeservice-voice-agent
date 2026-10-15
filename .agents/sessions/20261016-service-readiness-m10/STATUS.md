@@ -1,0 +1,60 @@
+# Session Status
+
+|key|value|
+|---|---|
+|Session ID|20261016-service-readiness-m10|
+|State|blocked|
+|Started|2026-10-16 KST|
+|Last Updated|2026-10-16 KST|
+|Related Issue|[VOIC-OPS-008](../../../docs/records/0_issues/VOIC-OPS-008.md)|
+|Active Plan|[VOIC-OPS-008-plan](../../../docs/records/1_plans/VOIC-OPS-008-plan.md) — approved; 부록 A M10 Gate 2 proposed|
+|Assigned Milestone|M10|
+
+## 1. Objective
+
+실제 전화·조회 사용 흐름 완결. 현재는 첫 산출물인 Gate 2 실행안 draft MR 준비를 완료하고 현장 입력을 기다린다. M10 실제 실행/완료는 미검증이다.
+
+## 2. Scope
+
+이번 변경은 계획 부록·M9 병합 인수 표기·정적 조사 로그와 M10 세션뿐이다. Gate 2 전 통합시험 생성/실행·시험 배포·실전화 금지. M11 구현/재부팅/상시 백업 제외. 매 실제 발신 직전 사용자 명시 응답 필수.
+
+## 3. Current Repository State
+
+`/tmp/voice-agent-m10`, `codex/ops008-m10-telephony`, base `f1c208811fb0e04208e384242f674ebd670c8857` = 시작 시 최신 origin/dev/v0.0.1. 부모 관리 및 M9 worktree를 변경하지 않았다. 부모 log-04 한 파일만 공개 안전 내용을 검토해 이관했다.
+
+M9 STATUS/log-03의 병합 대기 표기는 당시 상태다. 현재 GitHub MR #3 merged=true, merge f1c2088, head 9008b9f, 2026-10-16 00:51:33 KST를 재확인했다. 병합자 callme-waffle과 동일 tree는 사용자 인계 및 부모 log-04 근거다. 과거 로그·다른 채팅 STATUS를 고치지 않고 현재 계획/계약/ADR/PRD/SRS 승인 표기만 동기화했다. ADR-013 accepted는 설계 인수이며 M11 구현 완료가 아니다.
+
+## 4. Completed Work
+
+- 필수 워크플로·기록·README·PRD/SRS·ADR·배포/스크립트·기존 시험을 정적 확인했다.
+- 전화/조회 조사를 병렬 위임했다. 발신 비활성 live_app, 발신 전용 취소, 종료와 FXO Idle 구분, 기존 합성 시험의 한계를 실행안에 반영했다.
+- 계획 부록 A에 대상·순서·명령·판정/중단·키/데이터 보존·최대 8시도 후보·30분 실회선 창·원복을 구체화했다. 현장 입력과 실제 배포 값은 미확인으로 표시했다.
+- [log-05](../../../docs/records/2_logs/VOIC-OPS-008-log-05.md)에 준비 증거·미검증·부모 보고를 남겼다.
+
+## 5. Current Work
+
+문서 최종 검증 완료·커밋·draft MR 게시. 게시 결과는 아래 추적에 기록한다. 사용자에게 현장 일정/역할/FXS·PSTN과 기존 SSH 별칭/배포 디렉터리를 질문했으며 아직 응답이 없다.
+
+## 6. Verification State
+
+원격 SHA·M9 병합 포함·MR merged metadata 확인. 앱/배포/스크립트/시험 코드 변경 없음. 단위·통합시험·실전화·배포 실행 0. M9 120+3 PASS는 과거 결과다. Markdown 11개·상대 링크 98개 누락 0, 부록 shell block 4개 bash -n 및 diff 통과. 두 독립 검토의 수정 후 미해결 0. 상세는 log-05와 게시 추적을 따른다.
+
+## 7. Delegated Sub-agents
+
+- telephony-review: 전화 수명/BUG-003 정적 조사 및 부록 리뷰. 본인 sub STATUS만 수정.
+- history-review: 조회/인증/요구 매핑 및 부록 리뷰. 본인 sub STATUS만 수정.
+- Git·공유 문서·운영 판단은 주 담당자가 직렬 처리한다. 운영 환경 조작 없음.
+
+## 8. Blockers
+
+시험 날짜/KST 시작·종료·최대 시간, 참여자 역할, 수신/착신/FXS 준비, 실제 배포 SHA/이미지·경로·키/백업 복원 가능성 미확인. Gate 2 미승인. 필수 입력 없는 초안 병합은 누락 실행 조건의 승인으로 보지 않는다. 현재 SSH 별칭은 확인하지 못해 운영 호스트 접속을 시도하지 않았다.
+
+## 9. Next Action
+
+사용자 현장/접속 답변을 받아 A2/A3를 채우고 필요한 읽기 조사로 실제 배포와 원복을 확정한다. 구체 최종 실행안 MR의 사용자 병합을 확인한 뒤 승인 범위의 계측/시험만 생성·실행한다. 매 발신 직전 요청은 별도다.
+
+## 10. Handoff Notes
+
+담당 thread `01a1405f-3b4b-7ef2-81cb-016c3a52beb4`; host `remote-ssh-codex-managed:0535a69a-75b5-4b00-a34d-40c89933dcba`. 부모 `01a14007-f09a-7f43-a8c2-253563abfe26`, M9 `01a14026-e634-7fa3-b392-958f75b2b8e0`와 별개임을 list_threads로 확인했다. send_message_to_thread 미제공으로 직접 송신하지 않았으며 부모가 STATUS/로그/MR을 조회할 수 있다.
+
+실행안 승인 SHA/시각 없음, 결과 MR 없음. M10 결과 MR 병합 후에만 HANDOFF-PROMPT.md로 새 독립 M11 채팅에 인계하며 본 채팅은 M11을 실행하지 않는다. 에이전트 merge/auto-merge 금지. 실제 번호·키·토큰·원문은 공유 기록에 넣지 않는다.

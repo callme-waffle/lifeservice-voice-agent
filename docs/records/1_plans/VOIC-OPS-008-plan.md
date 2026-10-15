@@ -80,8 +80,8 @@
 
 |단계|담당 세션 ID(예정)|착수 조건|현재 상태|
 |---|---|---|---|
-|M9|20261016-service-readiness-m9|현재 사용자 명시 승인|독립 채팅 착수, M9 문서 작성·검증 중; 사용자 MR 병합 대기|
-|M10|착수 날짜-service-readiness-m10|M9 결과 MR 사용자 병합|미착수|
+|M9|20261016-service-readiness-m9|현재 사용자 명시 승인|MR #3 사용자 병합 인수 완료 — f1c2088, 2026-10-16 00:51:33 KST|
+|M10|20261016-service-readiness-m10|M9 결과 MR 사용자 병합|준비 착수, 부록 A 실행안 proposed·Gate 2 미승인|
 |M11|착수 날짜-service-readiness-m11|M10 결과 MR 사용자 병합|미착수|
 |M12|착수 날짜-service-readiness-m12|M11 결과 MR 사용자 병합|미착수|
 
@@ -514,7 +514,7 @@ flowchart TD
 |품질/Q01|PRD-05, SRS-O02/O03 및 M9 보완 요구|대표 문장·전화 부하·장기 문맥·자원/단계별 지연|아래 제안값을 M9에서 합의한 기준으로 판정|
 |장애/Q02/Q03|PRD-06 및 M9 보완 요구|모델/API/파일 오류·재부팅/롤백 후 신규 통화·조회|회선/점유 회수·경보·키/데이터 보존·복구 목표 충족|
 
-### 첫 개시 수용 수치 초안 — 아직 승인된 요구사항이 아님
+### 첫 개시 수용 수치 — M9 MR #3 병합 인수
 
 |항목|제안 기준|측정·유의사항|
 |---|---|---|
@@ -525,7 +525,7 @@ flowchart TD
 |복구/경보|장애 감지·운영자 알림 ≤2분, 재부팅 후 준비/통화 복구 ≤10분 목표|GPU 워밍업·비밀 주입·실전화 시간을 포함. 목표 미달이면 변경안/운영 제약을 합의|
 |저장·조회|예상 30일 파일량에서 목록/대화 조회 p95 ≤2초, 저장공간 30일 예상량+30% 여유|합성 파일로 용량·파일 스캔 비용 측정. 기존 모델·관측/감사 로그 공간 별도 반영|
 
-이 수치는 서비스 개시를 판단하기 위한 제안이며 현재 성능이나 보장치가 아니다. 목표 미달을 이유로 시험 후 기준을 조용히 완화하지 않는다. 변경 근거와 승인 기록을 남긴다.
+이 수치는 M9 MR #3 병합으로 인수된 서비스 개시 판정 기준이며 현재 성능이나 보장치가 아니다. 목표 미달을 이유로 시험 후 기준을 조용히 완화하지 않는다. 변경 근거와 승인 기록을 남긴다.
 
 ---
 
@@ -543,7 +543,7 @@ flowchart TD
 
 # 8. 완료 게이트
 
-- [ ] M9 기준 SHA·문서·요구사항·품질 목표·담당자·비밀 복구 방식 확정
+- [x] M9 기준 SHA·문서·요구사항·품질 목표·담당자·비밀 복구 설계 인수 — MR #3. 미정 현장 입력과 M11 구현은 별도
 - [x] 계획 실행 승인과 통합 시험 Gate 1 기록 — 2026-10-16 사용자 승인
 - [ ] 각 단계 결과 MR의 사용자 병합 및 실행 묶음별 Gate 2 기록
 - [ ] 실제 발신/착신 각각 2턴 이상·문맥·DTMF·종료·다음 통화 수락
@@ -579,4 +579,195 @@ flowchart TD
 - [ADR-013 비밀·백업 복구 제안](../3_decisions/ADR-013-secret-recovery-and-backup.md)
 - [M9 실행 로그](../2_logs/VOIC-OPS-008-log-03.md)
 
-계획은 approved를 유지한다. M9 결과 MR 제출은 사용자 병합 인수 또는 전체 계획 executed가 아니다.
+계획은 M12까지 approved를 유지한다. [MR #3](https://github.com/callme-waffle/lifeservice-voice-agent/pull/3)을 callme-waffle이 2026-10-16 00:51:33 KST에 병합했다. 병합 SHA는 `f1c208811fb0e04208e384242f674ebd670c8857`, 검증 head는 `9008b9f79f10ba3a4b75ed82046af7056bb236d6`, 동일 tree는 `24338afaa34cd0f4948296ac827c48016f9e930d`다. M10~M12 실행·서비스 개시는 미완료다.
+
+---
+
+# 부록 A. M10 Gate 2 실행안
+
+## A1. 승인 대상과 현재 상태
+
+|항목|내용|
+|---|---|
+|상태|**proposed / Gate 2 미승인 / 현장 입력 대기**. 본 계획 전체는 approved 유지|
+|담당|M10 독립 채팅 `01a1405f-3b4b-7ef2-81cb-016c3a52beb4`, 운영 담당 김화균|
+|소스|`f1c208811fb0e04208e384242f674ebd670c8857`; 2026-10-16 원격 fetch 확인. M9 병합 이후 차이 없음|
+|검토 대상|M10-S1-T1 → M10-S1-T2 → M10-S2-T1 → M10-S2-T2. 기존 WBS의 구체 실행 부록이며 새 마일스톤을 할당하지 않음|
+|첫 산출물|이 부록·승인 표기 정합화·정적 조사 증거만 담은 실행안 MR. 시험 코드는 아직 생성하지 않음|
+|승인 전달|필수 입력을 반영한 실행안 MR의 사용자 병합. 동일 승인 질문 반복 없음. 결과 MR은 별도|
+
+**현재 초안을 병합해도 미기입 현장 조건이나 배포 기준을 승인한 것으로 취급하지 않는다.** 아래 A2/A3의 필수 입력을 실행안에 채운 뒤 리뷰 가능한 최종 실행안으로 만들고 사용자 병합을 확인한다. 미완성 초안이 먼저 병합되면 누락 조건을 채운 후속 실행안 MR이 필요하다. 승인 SHA·병합 주체·KST 시각·head/tree 동일성을 log-05 후속 로그와 STATUS에 기록한다. 정확히 승인된 범위·조건이 유지되는 동안 Gate 2를 반복 요청하지 않는다. 별도 묶음/날짜·상한 확대·설정/후보의 중대한 변경은 실행안을 갱신한다.
+
+M9에서 인수된 수치와 B안 설계를 구현 완료로 보지 않는다. ADR-013 부팅 로더·백업 자동화·경보·VM 재부팅·Q01~Q03·72시간 운영은 M11/M12다. 이 실행안의 배포는 M10 시험에 필요한 일시 backend에 한정한다.
+
+## A2. 일정·현장·통화 예산
+
+|입력|현재 값 / 제안|실행 전 확정 조건|
+|---|---|---|
+|시험 날짜·KST 시작|미정, 사용자에게 요청함|정확한 날짜와 시작 시각 필수|
+|최대 소요·종료 예정|전체 90분 후보: 준비 45분, 실회선 창 30분, 회수·확인 15분. 종료 = 확정 시작+90분|사용자 가능 시간에 맞춰 최종 실행안에 절대 종료 시각 기재. 빌드·준비 지연 시 실회선 창을 무단 연장하지 않음|
+|참여자|운영 김화균 확정. 수신/착신·청취·DTMF·HT813 상태 관찰 역할의 실제 참여자는 미정|한 사람이 여러 역할을 맡을 수 있으나 양쪽 상태·종료 시각 기록 가능 여부 확인|
+|PSTN·휴대전화|발신 수신 및 착신 발신 가능한 사용자 통제 회선 준비 미확인|`TEST_OUTBOUND_1`, `TEST_INBOUND_1` 별칭만 공유|
+|FXS 진단|전화기 연결·현장 접근 미확인|D02 가능 여부 필수. 불가하면 원인 분리 한계와 이번 D02 생략 예외를 실행안에 명시해 사용자 병합으로 인수. TRY10 예외 재사용 금지|
+|Caller ID 변형|별도 발신원/표시 제한 가능 여부 미확인|F05 실행 가능 또는 현장 미확인으로 명시. 미실행 결과의 최종 예외 인수는 결과 MR에서 판정|
+|접속·배포 경로|GPU SSH 별칭·배포 디렉터리 미확인|비밀값 없이 기존 접속 경로를 확인해야 A3 읽기 조사 가능|
+|시계·종료 관찰|전화 종료 버튼과 서버·HT813 상태의 공통 시각 근거 미확인|KST 초 단위 기록과 시계 오차 상한. 단순 채팅 도착 시각을 버튼 시각으로 대체하지 않음|
+|보존·원복|기존 키 관리자·경로·유효 암호문/설정 백업 복원 가능성 미확인|A3/A7의 비공개 점검 결과를 boolean·개수·SHA로 기록|
+
+운영 시간은 M12 전, 장애 연락망·대체자·백업 매체/접근자는 M11 적용 전에 확정한다. 위 M10 시험 시간/역할·작업 전 복원 가능성 확인과 구분한다. 실제 번호·키·토큰·대화 원문을 채팅으로 요청하지 않는다.
+
+다음은 **승인 전 상한 후보**다. SIP 재전송은 별도 통화가 아니지만 새 발신 시도·진단·재시도는 모두 집계한다.
+
+|사례|방향(에이전트 기준)|최대 시도|조건|
+|---|---|---:|---|
+|D02|FXS→PSTN 진단 발신|1|별도 직전 요청/명시 응답. 성공 후 D03|
+|D03 + F02|에이전트 발신|1|동일 통화에서 실제 벨·2턴·문맥·DTMF·상대 종료까지. 두 통화로 나누지 않음|
+|F03|외부→에이전트 착신|1|2턴·문맥·DTMF·종료 시각·내역|
+|F04-A/B|외부→에이전트 착신|2|A: 웹 점유 중 busy, B: 회수 뒤 착신 및 새 웹 busy, B 통화는 재생 중 상대 종료|
+|F05|외부→에이전트 착신|1|조건부 표시 변형·음성 확인. 불가하면 미실행|
+|중단-P|외부→에이전트 착신|1|STT/작업/TTS 처리 중 상대 종료 및 추가 송출 없음|
+|취소-C|에이전트 발신|1|처리 또는 재생 중 운영 API 취소·BYE·회수|
+|진단/실패 재시도|양방향|0|자동 재시도 금지. 실패하면 의존 단계 중단, 새 실행안과 매 발신 응답 필요|
+
+통화별 최대 점유 후보는 D02 2분, D03/F02 4분, F03 4분, F04-A 1분/F04-B 3분, F05 2분, 중단-P 2분, 취소-C 2분이다(합계 최대 20분, 나머지 10분은 확인·회수). 한도 도달 전에 담당자가 정상 종료하며 미완료 사례를 PASS로 바꾸지 않는다. 발신 직전 응답을 기다리는 동안에도 30분 창은 늘어나지 않는다.
+
+총 최대 8시도 = 에이전트 발신 2 + FXS 진단 발신 1 + 착신 5. F05 불가 시 7, D02 별도 생략 인수 시 1 감소. F04 busy 시도도 착신 수에 포함한다. 기존 계약의 F02 1/F03 1/F04 2/F05 조건부 1에 D02 및 처리 중 종료·운영 취소 각 1회를 추가 제안한 것이며 포괄 승인이 아니다. 무발화/손상/종료 누락은 격리 합성 경계에서 우선 검증해 실회선 통화를 추가하지 않는다. 실제 무발화가 발생하면 별도 관측하되 계획된 2턴 성공을 대체하지 않는다.
+
+매 발신 직전 이 담당 채팅에서 `사례 ID·대상 별칭·1회·최대 점유·FXO Idle/수신 준비·실행안 MR`을 제시해 요청하고 명시 응답을 기다린다. 응답 없는 대기에는 발신하지 않는다. 요청/응답의 KST 시각과 메시지 식별자(제공되지 않으면 시각과 요지), 해당 시도 ID만 로그에 남긴다. 원문 전체/번호는 남기지 않는다. 준비가 바뀌거나 해당 시도가 끝나면 응답을 재사용하지 않는다. FXS 현장 발신도 동일하다. 착신도 현장 담당자와 지금 걸 시점을 맞춘다.
+
+## A3. 소스·실제 배포 차이 및 P0 확인 순서
+
+현재 원격 후보와 M9 병합은 같다. `080f5d3..f1c2088`의 앱 실행 코드·배포·스크립트·시험 코드는 동일하고 README·요구·운영/시험 기록만 변경됐다. 이것이 **실제 배포가 후보와 같다**는 증거는 아니다.
+
+|비교 대상|관측 결과|허용 변경 / 차단|
+|---|---|---|
+|실제 backend 소스 SHA/dirty|미확인|운영 checkout HEAD만으로 실행 컨테이너 코드를 단정하지 않음. 이미지 label/패키지 파일 manifest 대조 필요|
+|backend 이미지 ID/RepoDigest|미확인|현재 이미지 ID를 먼저 고정·보존. digest 없으면 immutable image ID와 소스 파일 해시로 식별|
+|STT/TTS 이미지·실제 준비|미확인|M10에서 모델 교체·재빌드·캐시 삭제 없음. 현재 모델이 호환·ready가 아니면 중단 후 범위 재검토|
+|기존 설정·데이터 마운트·키 참조|미확인|새 빈 데이터 경로/키로 대체 금지. 기존 디렉터리·권한·동일 키로 실제 기존 암호문 인증 가능해야 함|
+|HT813/포트|미확인|기존 검증 설정의 읽기 대조 우선. 장비 설정 변경은 차이·백업·원복을 먼저 이 실행안에 확정|
+
+다음 읽기 명령은 운영자가 확인한 GPU 접속 환경에서 수행할 후보이며 아직 실행하지 않았다. `$M10_DEPLOY_DIR`, `$M10_ENV_FILE` 등은 비공개 경로 참조다. 환경 파일을 `source`하거나 출력하지 않는다. `docker inspect` 전체/`docker compose config` 전체/`ps e`/패킷 원문/pcap/오디오 캡처는 공유하지 않는다.
+
+```sh
+# R1: 확인된 운영 checkout에서 소스와 상태만
+cd "$M10_DEPLOY_DIR"
+git rev-parse HEAD
+git status --porcelain
+# R2: 환경·마운트 내용을 출력하지 않는 컨테이너 식별
+sudo -n docker compose --env-file "$M10_ENV_FILE" -f deploy/gpu/compose.yaml -f deploy/gpu/compose.backend.yaml ps -a --format json
+sudo -n docker inspect --format '{{.Image}} {{.State.Status}}' "$M10_BACKEND_CONTAINER"
+sudo -n docker image inspect --format '{{.Id}} {{json .RepoDigests}} {{index .Config.Labels "org.opencontainers.image.revision"}}' "$M10_BACKEND_IMAGE"
+# R3: 준비 확인 — 상태 코드와 health 상태 필드만 허용
+curl --silent --show-error --max-time 3 --output /dev/null --write-out '%{http_code}\n' http://127.0.0.1:8101/ready
+curl --silent --show-error --max-time 3 --output /dev/null --write-out '%{http_code}\n' http://127.0.0.1:8102/ready
+curl --silent --show-error --max-time 5 http://127.0.0.1:8000/health
+free -m
+nvidia-smi --query-gpu=memory.used,memory.total,utilization.gpu --format=csv,noheader
+ss -lun
+```
+
+컨테이너 식별자는 운영 이름을 포함할 수 있으므로 공개 로그에는 역할 별칭·상태·SHA만 옮긴다.
+
+P0 순서는 (1) 현장 FXO Idle·활성 통화 0·PSTN/수신 준비, (2) D01 장비 설정·Caller ID Transport Type과 선택 헤더 일치, (3) 허용 번호 1건의 별칭 대조와 기능 코드 거부 정책, (4) 기존 키/데이터/설정 복원 가능성, (5) 실제 배포 SHA/이미지 차이, (6) STT/TTS ready·자원, (7) backend 단일 worker·127.0.0.1 API·SIP/RTP 충돌 없음, (8) 인증 경계·관측기·30분 종료 타이머다. 현재 운영 경계에 없는 명령/설정을 임의 적용하지 않는다.
+
+## A4. 최소 시험 배포와 원복 명령
+
+A3의 실제 값이 채워지기 전에는 배포하지 않는다. 모델/관측은 현행 서비스를 사용하고 backend만 후보 이미지로 일시 교체한다. 기존 backend가 없으면 ‘중지 상태’ 자체가 원복 기준이다. 현재 프로세스가 Compose 관리인지 확인되지 않으면 아래 명령을 적용하지 않는다. 다른 배포 방식은 구체 명령을 보완해 MR로 확정한다.
+
+변경 후보는 backend 이미지, `VOICE_AGENT_HT813_INBOUND_ENABLED`, 실제 장비와 일치하는 `VOICE_AGENT_HT813_CALLER_ID_HEADER`, 정확 허용 목록, 기존 데이터/비밀 경로 전달 및 시험용 메타데이터 관측 진입점이다. **포트·Dial Plan·종료 톤·인증·방화벽 변경은 현재 제안에 없음**. 필요하면 차이와 원복을 먼저 제시한다. Compose에 매핑되지 않는 값을 `.env`만 바꿔 적용했다고 하지 않는다.
+
+Gate 2 이후 생성할 시험 overlay는 `backend.image=voice-agent-backend:m10-<고정SHA>`, `restart: "no"`, 단일 worker의 시험 진입점, 기존과 같은 데이터·비밀 마운트를 지정한다. 관측 코드는 아래 A6 범위의 wrapper이며 제품 API/데이터/전화 정책을 변경하지 않는다. 후보 코드·관측 코드의 실제 SHA/이미지 ID·overlay 해시는 생성 후 기록하고 소스 diff를 확인한다. 동작 변경이 필요하면 결함/계획 절차로 재검토한다.
+
+```sh
+# D1: 승인 후 별도 후보 checkout. 기존 운영 checkout/reset/clean 금지
+# M10_TEST_SHA는 승인된 소스+범위 내 계측 코드의 실제 commit으로 고정한다.
+cd "$M10_CANDIDATE_DIR"
+test "$(git rev-parse HEAD)" = "$M10_TEST_SHA" || exit 1
+test -z "$(git status --porcelain)" || exit 1
+git merge-base --is-ancestor f1c208811fb0e04208e384242f674ebd670c8857 HEAD || exit 1
+sudo -n docker build -f deploy/gpu/Dockerfile.backend -t "voice-agent-backend:m10-$M10_TEST_SHA" .
+# overlay는 새 시험 harness 경로를 read-only로 마운트하고 진입점 변경; 키 값은 포함하지 않음
+sudo -n docker compose --env-file "$M10_ENV_FILE" -f deploy/gpu/compose.yaml -f deploy/gpu/compose.backend.yaml -f "$M10_TEST_OVERLAY" config --quiet
+# 활동 통화 0/FXO Idle, 복원 자료 확인 후에만 기존 backend 정상 중지
+sudo -n docker compose --env-file "$M10_ENV_FILE" -f deploy/gpu/compose.yaml -f deploy/gpu/compose.backend.yaml stop -t 15 backend
+# 실제 이미지와 overlay를 확인한 뒤 모델/관측 재생성 없이 backend만 생성
+sudo -n docker compose --env-file "$M10_ENV_FILE" -f deploy/gpu/compose.yaml -f deploy/gpu/compose.backend.yaml -f "$M10_TEST_OVERLAY" up -d --no-deps --no-build backend
+```
+
+backend-only 빌드는 STT/TTS 이미지를 바꾸지 않는다. 기존 이미지 태그의 덮어쓰기/삭제/prune를 하지 않는다. M10 wrapper는 시작 후 30분에 정상 종료를 시작하며 재시작하지 않는다. 시작 직후 deadline을 KST로 기록하고 창 종료 5분 전부터 새 통화를 받지 않도록 현장과 조율한다. timeout은 시험 창 종료이며 정상 통화 중 무음 제한을 새로 도입하는 것이 아니다. 장비 전체 착신 정책을 임의 변경하지 않는다.
+
+원복 overlay는 작업 전 확보한 **기존 immutable backend image ID·기존 명령·기존 restart 정책**만 지정하며 같은 데이터/비밀 경로를 유지한다. 시험 wrapper/mount는 원복 명령에 포함하지 않는다.
+
+```sh
+# D2: 먼저 발신은 API DELETE, 착신은 상대 종료 또는 backend SIGTERM으로 정상 BYE
+# compose stop은 15초 뒤 SIGKILL 가능: 10초 안 정상 종료 관찰, 미회수면 실패·현장 회수 판단
+sudo -n docker compose --env-file "$M10_ENV_FILE" -f deploy/gpu/compose.yaml -f deploy/gpu/compose.backend.yaml -f "$M10_TEST_OVERLAY" stop -t 15 backend
+# FXO Idle·RTP 해제 확인 뒤 기존 검증 설정으로 돌아감
+sudo -n docker compose --env-file "$M10_ORIGINAL_ENV_FILE" -f "$M10_ORIGINAL_COMPOSE" -f "$M10_ORIGINAL_BACKEND_COMPOSE" -f "$M10_ROLLBACK_OVERLAY" config --quiet
+sudo -n docker compose --env-file "$M10_ORIGINAL_ENV_FILE" -f "$M10_ORIGINAL_COMPOSE" -f "$M10_ORIGINAL_BACKEND_COMPOSE" -f "$M10_ROLLBACK_OVERLAY" up -d --no-deps --no-build backend
+```
+
+원래 backend가 실행 중일 때만 위 마지막 up을 실행한다. **원래 중지였으면** 같은 원복 명령을 `up --no-deps --no-build --no-start backend`로 실행해 원래 이미지/명령/mount/restart 설정의 미기동 컨테이너를 복원한다. **원래 부재였으면** 시험 backend가 중지됨과 `/data`·비밀의 외부 마운트를 확인하고 시험 Compose 조합에서 `rm -f backend`로 시험 컨테이너만 제거한다(`-v` 금지). 시험 wrapper 컨테이너를 남겨 이후 start에서 다시 실행되게 하지 않는다. [Docker up의 --no-start](https://docs.docker.com/reference/cli/docker/compose/up/)와 [rm의 볼륨 보존](https://docs.docker.com/reference/cli/docker/compose/rm/)을 기준으로 하며 현장 Compose 버전의 옵션 지원도 읽기 확인한다. 원래 이미지/설정이 안전하게 실행 가능한지 확인되지 않으면 복구됐다고 선언하지 않는다. 회선이 남으면 신규 통화 없이 김화균에게 현장 회수를 요청한다. 데이터/모델/관측 volume 삭제, 키 교체, `down -v`, VM 재부팅, 미검증 FXS 자동 우회는 원복 수단이 아니다.
+
+## A5. 사례별 실행·관측·판정
+
+아래 명령의 `m10_probe.py`/`m10_live_app.py`는 **Gate 2 승인 후 만들 도구의 제안 인터페이스**이며 현재 존재하거나 검증된 도구가 아니다. 새 시험 코드·도구를 승인 전에 만들지 않는다. 실제 CLI가 다르면 문서와 안전 검토를 동기화하고 실행한다. `$M10_PY`는 확인된 Python 3.11/3.12 가상환경 실행 파일, `$M10_CONTROL_FILE`은 0600 비추적 설정 파일 경로다. 파일 안에 token/번호의 기존 파일 참조를 두고 도구가 메모리에서만 읽는다. 쉘 인자·출력에는 값이 없다. CLI 간 ID 전달은 같은 보호 디렉터리의 `0600` 비추적 `case-state.json`(사례 ID→session_id·상태·승인된 시도 소비 여부만)에 원자적으로 기록한다. 번호·토큰·본문은 저장하지 않는다. 각 CLI는 `--config-file`로 동일 상태 파일 참조를 읽고 이미 소비된 시도로 재발신하지 않는다. 파일은 시험 종료 후 안전하게 정리하고 공개 증거에는 익명 사례 ID만 남긴다.
+
+|WBS·사례 / 요구|순서·명령 또는 현장 동작|관측·기대 결과|실패·중단 기준|
+|---|---|---|---|
+|S1-T1 P0 / PRD-06/09; I02/O01/O02/O11~14|A3 R1→R3 및 현장 확인. 후보 기동 후 `m10_probe.py preflight --config-file "$M10_CONTROL_FILE"`|키/경로 연속성·ready·loopback·1 worker·회선 Idle·포트 충돌 없음. `/health`만으로 PSTN/API 성공 판정 금지|하나라도 미확인·불일치면 실제 통화 금지|
+|S1-T1 D01 / PRD-02; T01/T02|HT813 UI 읽기: Stage Method, Wait for Dial-Tone, Dial Plan, Prefix/PIN 사용 여부, DTMF 길이/간격, 다이얼 전 지연, access code, 종료 감지|기존 성공 설정과 일치 여부만 기록. PIN/번호/설정 원문 미공유|불일치면 변경 계획/백업 없이는 수정하지 않음|
+|S1-T1 F01 / PRD-02/03; T01/I05|`m10_probe.py reject-dial --config-file "$M10_CONTROL_FILE"` — 형식 유효한 비허용 합성 번호와 `*00`, `#`를 각각 POST|비허용 403, 기능 코드 422, 새 INVITE 0, FXO Idle. 합성 번호가 정확 허용 목록에 없음을 사전 검사|202/INVITE>0 즉시 취소·BYE/Idle, F02 금지|
+|S1-T1 D02 / PRD-02; T02, BUG-003|직전 요청/응답 후 현장 FXS access code→TEST_OUTBOUND_1 1회|발신음·실제 벨·연결·상대 종료·Idle. FXS 제품 기능 완료로 확대하지 않음|벨 없음/실패 시 D03 금지. 불가 시 이번 예외 미승인이면 중단|
+|S1-T1 D03 → S1-T2 F02 / PRD-02/05; T02~06/O03/O07|직전 요청/응답 후 `m10_probe.py dial --case F02 --target-alias TEST_OUTBOUND_1 --config-file "$M10_CONTROL_FILE"`; API 응답 ID를 보호된 사례 상태 파일에 보관, 2턴+문맥 의존 질문·DTMF·상대 종료|SIP 상태와 **실제** 벨/청취를 분리. 같은 ID 2턴, 후속 문맥 활용, 첫 답변 후 BYE 없음, DTMF 숫자/기호/지속시간 별도 판정|15초 무벨/무응답 점유면 취소; 실패 후 자동 재발신 0. D03 실패 시 F03 미진행|
+|S1-T2 F03 / PRD-03/05; I01/I03/T03/T05/T06/O07|`m10_probe.py observe --case F03 --config-file "$M10_CONTROL_FILE"`; 현장 착신 1회, 같은 통화 2턴·DTMF·상대 종료|버튼 시각→BYE/200→RTP 해제→gate 해제→FXO Idle. 최후 회수시각 기준 ≤10초|버튼 시각 근거 없으면 정량 미검증. 10초 초과 실패, 15초 미회수 시 정상 종료/현장 회수|
+|S2-T1 H01 / PRD-07/08; I06/O04/O12|`m10_probe.py history --case F02,F03 --config-file "$M10_CONTROL_FILE"`; 착신 목록 및 두 실제 ID conversation|실제 Caller ID 헤더 일치·전체 번호 정확/null, 시작/종료/상태. 이 시점 실제 새 착신은 F03 1건이므로 최신순/페이지는 합성 시험으로 먼저 판정하고 F04/F05 뒤 읽기 재조회로 실장 대조(추가 통화 0). 표본 부족은 미검증. 동일 ID별 2턴 순서·다른 통화 격리. 번호/본문은 로컬 메모리 비교 후 boolean만 출력|ID 불일치·원문 노출·정렬/내용 누락 실패. 합성 조회 통과를 실제 조회로 표시 금지|
+|S2-T2 F04-A/B / PRD-03/06; C03/T04/I04/W01|`m10_probe.py web-hold --config-file "$M10_CONTROL_FILE"`로 인증 웹 점유→착신 A→웹 cancel→착신 B→새 웹 start→재생 중 상대 종료→새 웹 start/cancel|A는 486·거절된 통화 모델/API 0, B는 수락·새 웹 busy. 회수 뒤 새 웹 수락. 활성 ≤1. B에서 재생 중 종료 시 추가 음성 없음|거절 요청이 모델/API 호출·중복 활성·회선 잔류면 중단. webhook/웹 UI 제품 완료로 확대 금지|
+|S2-T2 F05 / PRD-03/07; I01/I02/I06|현장 다른 발신원 또는 표시 제한 착신 1회. `m10_probe.py observe --case F05 --config-file "$M10_CONTROL_FILE"`|Caller ID로 거부하지 않고 음성 처리, 표시 정보/null의 정확성. 타 피어 거부는 별도 합성 사례|현장 미지원은 미검증. 결과 MR에서 잔여 위험/예외 인수 여부 판단|
+|S2-T2 중단-P / PRD-06; C04/C05/T04|현장 착신 1회, 발화 후 처리 단계 신호에서 상대 종료|모델/작업 대기 취소·새 송출 없음·BYE/RTP/gate/Idle. 저장된 최종 user만 남을 수 있음|지정 처리 단계에 걸리지 않으면 해당 변형 미검증. 재시도하지 않음|
+|S2-T2 취소-C / PRD-02/06; T04/C05|새 직전 요청/응답 후 발신 1회, 처리/재생 중 `m10_probe.py cancel --case C --config-file "$M10_CONTROL_FILE"` → DELETE 해당 ID|202, BYE/CANCEL 및 RTP/gate 회수·Idle. 뒤의 웹 start/cancel로 점유 재사용 확인|현재 DELETE는 발신만 지원. 착신 ID에 DELETE를 가정하지 않음. 취소/회수 실패면 중단|
+|S2-T2 H02 / PRD-06/07/08; I06/O04/O01/O12|A6 격리 파일·로컬 API 경계 시험. live에서는 미인증 GET·잘못된 UUID/페이지 GET만 부작용 없이 확인|401/403/404/422/503·무발화·부분 턴·incomplete·손상·세션 격리. 빈 착신 목록은 200|손상 주입/만료 시계 조작은 운영 데이터에 절대 수행하지 않음|
+
+각 행의 CLI는 `$M10_PY tests/integrations/ht813/m10_probe.py` 뒤에 표의 인자를 붙인다. `dial`은 자동 루프·자동 재시도·다른 번호 탐색 기능을 갖지 않는다. 발신 202 이후 `GET /operator/calls/{session_id}`로 종료를 추적한다. 발신 목록 API는 없다. 착신 ID는 수신 이벤트와 새 목록의 ID를 대조한다. 텍스트는 TTS **이전** 저장될 수 있으므로 재생 중 종료 시 assistant 항목 존재를 오류로 취급하지 않는다. `incomplete`는 착신 종료 메타데이터 없음이며 ‘부분 대화’와 다른 뜻이다.
+
+S1의 선행 사례 실패/미검증을 숨기고 S2를 완료 처리하지 않는다. 같은 실행 창 안에 의존하지 않는 읽기 확인은 할 수 있으나 후속 실전화는 금지한다. 기존 F03 다음 F04-B의 새 통화 수락은 전화 재사용 근거이며 마지막 취소 뒤 웹 수락은 gate 재사용 근거다. 마지막 취소 후 **실전화** 재사용은 추가 통화 없이 증명할 수 없으므로 합성 다음 통화 시험과 구분해 결과 MR에 남긴다.
+
+## A6. 승인 후 생성·재사용할 시험 및 계측
+
+기존 단위 120+3 PASS는 M9 log-03의 과거 증거다. 이번 준비에서는 재실행하지 않았다. 승인 후 앱/계측 변경이 생기면 README의 기존 단위 명령으로 영향 범위를 실행하고 컴포넌트별 TRY 로그를 남긴다.
+
+기존 통합 파일은 `test_*.py`, orchestrator pytest 설정은 `*.test.py`이므로 **개별 파일을 명시**한다. 통합시험 생성/실행은 아래 명령도 Gate 2 이후다.
+
+```sh
+PYTHONPATH=apps/orchestrator/src "$M10_PY" -m pytest -c apps/orchestrator/pyproject.toml tests/integrations/call_history/test_inbound_call_history.py tests/integrations/call_history/test_call_conversation.py tests/integrations/retention/test_retention_file_boundary.py -q
+PYTHONPATH=apps/orchestrator/src "$M10_PY" -m pytest -c apps/orchestrator/pyproject.toml tests/integrations/ht813/test_loopback_sip_rtp.py -q
+# 다음 두 파일은 승인 후 생성할 시험이며 현재 존재하지 않음
+PYTHONPATH=apps/orchestrator/src "$M10_PY" -m pytest -c apps/orchestrator/pyproject.toml tests/integrations/call_history/test_m10_query_failures.py tests/integrations/ht813/test_m10_lifecycle_boundary.py -q
+```
+
+- `call_history` 기존 2건과 retention 5건은 fake/합성 파일 경계다. 실제 전화·모델·작업 API의 성공이 아니다. 실제 통화 ID 연결은 H01로 따로 판정한다.
+- `test_m10_query_failures.py` 제안: 기존 두 call_history 파일 확장을 우선한다. 새 파일은 실제 암호문 손상→HTTP 503·원문 비노출, 무발화 목록+대화404, 시작만 incomplete, 전화↔전화 ID 격리의 미커버 경계에 한정한다. user-only·인증·UUID·페이지는 기존 시험을 재사용하고 재생 중 종료는 lifecycle 시험 한 곳에서 보존→조회까지 연결한다. 임시 경로·시험 키·결정적 시계로 검증하며 실제 운영 키/파일 사용 0. 파일 확장만으로 충분하면 새 파일 명령은 확장한 기존 파일 명령으로 대체한다.
+- `test_m10_lifecycle_boundary.py` 제안: 실제 채널/core/gate/retention과 loopback SIP·fake 모델/API를 결합해 처리/송출 중 BYE·취소·다음 **전화** 수락, 웹↔전화 점유, 잘못된 피어·SDP·Caller ID 헤더 변형을 검증. 기존 loopback의 피어·SDP·busy·후속 수락 사례는 복제하지 않고 보존→HTTP 결합과 부족한 종료 경계만 추가한다. 합성과 현장을 별도 집계한다. 알려진 결함 수정 시 재현 FAIL→수정 PASS를 남긴다.
+- `m10_live_app.py`/`m10_probe.py` 제안: 기존 `live_app.py`는 허용 목록을 강제로 비워 발신이 비활성화되므로 그대로 F01/F02에 쓰지 않는다. 현재 발신 event sink는 CallState만 저장하고 기존 착신 harness는 DTMF 횟수만 기록한다. 승인 후 동일 생산 조립에 메타데이터 관측 wrapper와 30분 정상 종료를 추가한다. wrapper가 이벤트/취소/반환값을 바꾸지 않음을 fake 경계로 먼저 확인한다.
+- 타이머 계약: `dial` helper는 HTTP POST 직전 monotonic 시각부터 15초 무벨 watchdog를 시작하고 현장 벨 보고가 없으면 해당 발신 ID에 DELETE를 1회 요청한다. HTTP 202를 잃었거나 helper 중단으로 ID를 모르면 운영자는 backend 정상 종료로 회수한다. SIP API의 60초 설정 제한 또는 `active`는 watchdog를 해제하지 않는다. A2 사례별 점유 상한은 발신 POST/착신 INVITE 시점부터 측정하고 상한 전 현장 상대 종료를 요청한다. 만료 시 발신 DELETE, 착신 정상 backend 종료로 회수하고 미완료를 기록한다. 전체 30분 타이머는 wrapper 시작 기준이며 helper와 독립적으로 정상 종료를 시작한다. 임의 자동 재발신은 없다.
+- 계측 출력 allowlist: 사례 ID, UTC/KST 시각, 익명 통화 상관 ID, SIP method/status, 송수신 방향, RTP 열림/닫힘·패킷 수, 턴 번호·단계, active 개수, DTMF **사전에 정한 시험 기호 `5`·`#`**/지속시간, Caller ID 일치/null boolean, HTTP status·순서/개수/격리 boolean. Request-URI·SIP 전체 헤더·원번호·token·키·음성·transcript/response는 출력 금지. 실전화 API 본문은 메모리에서 비교하고 공유 결과에는 원문 0.
+- 외부에서 loopback API로 접속하면 네트워크 거부가 정상이다. 403을 보기 위해 운영 API를 공개하지 않는다. 실제 비loopback 연결 거부와 앱 remote-client 403의 격리 시험을 분리한다. SSH 터널의 loopback 인증 성공을 원격 거부 실패로 해석하지 않는다.
+- 청취·문맥 활용·실제 번호 비교는 현장 담당자의 판정이다. 메타데이터/단위 문맥 검사만으로 실제 의미 이해를 주장하지 않는다. 수신 실패를 SIP `active`로 PASS 처리하지 않는다.
+
+## A7. 보존·중지·완료와 증거
+
+작업 전 기존 설정의 제한된 사본과 원복 이미지·명령을 준비하고, 키 관리자가 정본 키의 복구 가능성을 내용 비출력으로 확인한다. 기존 데이터 경로/마운트·권한/파일 수와 실제 기존 암호문 1건의 같은 키 인증 가능성을 보호된 환경에서 확인한다. API 원문을 공유하는 대신 복호화/무결성 성공 여부만 기록한다. 새 빈 경로의 ready는 동일 키 검증이 아니다. 암호문 백업이 필요하면 별도 보호된 경로에 완성 파일만 복사하며 생성시각+30일 만료를 유지한다. 복원 대상·매체·접근자·원복 명령이 미확정이면 배포 전 차단한다. 상시 백업 시스템을 이 단계에서 도입하지 않는다.
+
+중단 순서는 **신규 요청 중지 → 발신 API 취소 또는 상대 종료/착신 backend 정상 종료 → BYE/200·RTP/gate 해제 관측 → 현장 FXO Idle 확인 → 검증된 기존 설정/이미지 복귀 → 기존 키·데이터와 준비 상태 확인**이다. 실제 출력/모델 취소의 한계와 회선 미회수는 실패로 기록한다. 30분 timeout 또는 종료 예정 초과 시 강행하지 않는다. 로그 수집기는 원문이 없는 검증 결과만 기록하고 시험 임시 관측 프로세스·timer·시험 전용 파일만 정리한다. 기존 비밀 원본/런타임 파일은 소유·사용 상태 확인 없이 삭제하지 않는다.
+
+각 사례는 `.agents/templates/test-run-log.md`로 WBS에 맞는 `tests/integrations/<boundary>/logs/M010_S001_T001-TRY1.md` 등의 새 로그를 작성한다. 기존 M6 TRY를 덮어쓰지 않는다. 실행 명령/소스·이미지·시각/사례별 PASS·FAIL·미실행·미검증/사용자 관찰/중단 원인/요청·응답 근거를 기록한다. 원문 없는 영속 요약은 log-06 이후 다음 빈 번호를 쓴다.
+
+- [ ] 실행안의 필수 현장 입력·실제 배포 차이·원복이 확정되고 사용자 MR 병합 Gate 2 확인
+- [ ] P0/D01/F01, D02/D03 또는 이번 예외 판정과 발신별 명시 응답 기록
+- [ ] 발착신 각각 2턴·문맥·청취·DTMF(별도)·종료 ≤10초·다음 통화 수락
+- [ ] 실제 두 조회·Caller ID/번호 없음·정렬/격리, 웹 충돌·취소·중단·실패 경계
+- [ ] 실장 불가/표본 부족·BUG-003 원인 미확정의 잔여 위험과 사용자 예외 인수 여부
+- [ ] 변경/시험 증거·현재 STATUS 갱신, 별도 M10 결과 MR 제출 및 사용자 병합 확인
+
+BUG-003은 한 번 성공해도 열린 상태다. 원인 수정 또는 반복 수용 조건과 남은 위험을 사용자에게 판정받아야 한다. M10 결과 MR 병합 전 M11 착수/인계 완료로 표시하지 않는다. 결과 인수 후에만 본 세션의 `HANDOFF-PROMPT.md`를 작성한다. 서비스 개시 완료를 선언하지 않는다.

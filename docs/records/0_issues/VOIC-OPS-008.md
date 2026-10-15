@@ -57,4 +57,4 @@
 
 ## M9 운영 입력·설계 검토
 
-2026-10-16 사용자 확인: 운영 담당자 김화균, 매 실전화 발신 직전 사용자에게 먼저 요청. 운영 시간·장애 연락 경로는 미정이다. [운영 계약](../../guides/service-readiness-contract.md)과 [ADR-013 제안](../3_decisions/ADR-013-secret-recovery-and-backup.md)을 결과 MR에서 검토한다.
+2026-10-16 사용자 확인: 운영 담당자 김화균, 매 실전화 발신 직전 사용자에게 먼저 요청. 운영 시간·장애 연락 경로는 미정이다. [운영 계약](../../guides/service-readiness-contract.md)과 [ADR-013](../3_decisions/ADR-013-secret-recovery-and-backup.md)의 B안과 수용 수치는 MR #3 사용자 병합으로 인수했다. M10 Gate 2·현장 입력·M11 구현은 별도다.
