@@ -48,4 +48,3 @@ Python 상대 Markdown 링크 존재 검사와 pyproject 버전 정적 추출, g
 ## 8. Handoff to Parent
 
 PRD/SRS 0.1.0 정합화 완료. PRD-09 및 SRS-O05~O14 추가, 기존 PRD-01~08 유지, 전화 우선/후속 범위·M6/M7/M8 상태·버전·새 Gate 2·김화균/발신 직전 요청을 명시했다. O05~O10 수치는 계획과 같고 MR 병합 전 제안이다. PRD/SRS는 각각 독립 커밋해야 한다. 부모 작성 중인 service-readiness-contract.md만 링크 존재 재검증이 필요하며 baseline 링크는 존재 확인했다.
-
