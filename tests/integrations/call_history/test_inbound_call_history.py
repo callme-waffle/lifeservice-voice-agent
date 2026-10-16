@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import asyncio
+import base64
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from uuid import uuid4
 
 import httpx
 import pytest
@@ -15,6 +17,7 @@ from voice_agent.channels.ht813.operator import OperatorCalls, operator_router
 from voice_agent.channels.ht813.sip import request_bytes
 from voice_agent.channels.ht813.turns import TurnBoundary
 from voice_agent.contracts.flow import SingleSessionGate
+from voice_agent.contracts.session import Channel, SessionContext
 from voice_agent.infrastructure.retention import EncryptedRetention
 
 PEER = ("192.0.2.17", 5062)
@@ -53,7 +56,12 @@ def packet(method: str, call_id: str, caller: str) -> bytes:
 
 @pytest.mark.asyncio
 async def test_voic_feat_004_m7_s3_prd07_srs_i06_inbound_history(tmp_path: Path):
-    """Given two synthetic calls, when queried, then only authorized encrypted recent metadata is returned."""
+    """VOIC-OPS-008 M10-S2; PRD-07/08, SRS-I06/O04.
+
+    Given two silent synthetic calls, when queried before and after cancellation,
+    then start-only metadata is incomplete, ended metadata persists without an
+    invented conversation, and authorized pages retain order and expire.
+    """
     instant = [START]
     store = EncryptedRetention(
         recordings_dir=tmp_path / "private" / "recordings",
@@ -78,16 +86,47 @@ async def test_voic_feat_004_m7_s3_prd07_srs_i06_inbound_history(tmp_path: Path)
     )
     app = FastAPI()
     app.include_router(operator_router(OperatorCalls(None, gate, TOKEN, store)))
+    headers = {"Authorization": f"Bearer {TOKEN}"}
     try:
         for index, caller in enumerate(("01012345678", "anonymous")):
             call_id = f"synthetic-{index}"
             await inbound.handle_packet(packet("INVITE", call_id, caller), PEER)
+            session_id = gate.active_session_id
+            assert session_id is not None
+            async with httpx.AsyncClient(
+                transport=httpx.ASGITransport(app=app, client=("127.0.0.1", 1234)),
+                base_url="http://localhost",
+            ) as client:
+                started = await client.get("/operator/inbound-calls", headers=headers)
+                assert started.status_code == 200
+                assert started.json()["items"][0] == {
+                    "session_id": str(session_id), "started_at": instant[0].isoformat(),
+                    "ended_at": None, "status": "incomplete",
+                    "caller_number": caller if index == 0 else None,
+                }
             await inbound.handle_packet(packet("CANCEL", call_id, caller), PEER)
             async def wait_for_release():
                 while gate.active_session_id is not None:
                     await asyncio.sleep(.01)
 
             await asyncio.wait_for(wait_for_release(), timeout=4)
+            async with httpx.AsyncClient(
+                transport=httpx.ASGITransport(app=app, client=("127.0.0.1", 1234)),
+                base_url="http://localhost",
+            ) as client:
+                ended = await client.get("/operator/inbound-calls", headers=headers)
+                assert ended.status_code == 200
+                assert ended.json()["items"][0] == {
+                    "session_id": str(session_id), "started_at": instant[0].isoformat(),
+                    "ended_at": instant[0].isoformat(), "status": "ended",
+                    "caller_number": caller if index == 0 else None,
+                }
+                silent = await client.get(
+                    f"/operator/calls/{session_id}/conversation", headers=headers,
+                )
+                assert silent.status_code == 404
+                assert silent.json() == {"detail": "conversation not found"}
+                assert not list(store.transcripts_dir.glob("*.va1"))
             instant[0] += timedelta(seconds=1)
 
         files = list(store.calls_dir.glob("*.va1"))
@@ -117,4 +156,49 @@ async def test_voic_feat_004_m7_s3_prd07_srs_i06_inbound_history(tmp_path: Path)
             assert expired.json() == {"items": [], "next_offset": None}
     finally:
         await inbound.close()
+        await store.close()
+
+
+@pytest.mark.asyncio
+async def test_voic_ops_008_m10_s2_corrupt_call_returns_private_503(tmp_path: Path, caplog):
+    """PRD-06/07, SRS-O01/I06: given readable encrypted call metadata,
+    when its ciphertext is damaged after startup, then HTTP returns generic 503
+    without exposing caller number, file path, token, or key in response/logs.
+    """
+    key = bytes(range(32))
+    caller = "01012345678"  # Synthetic test number only.
+    store = EncryptedRetention(
+        recordings_dir=tmp_path / "private" / "recordings",
+        transcripts_dir=tmp_path / "private" / "transcripts",
+        calls_dir=tmp_path / "private" / "calls",
+        audit_path=tmp_path / "private" / "deletion-audit.jsonl",
+        key=key, clock=lambda: START,
+    )
+    await store.start()
+    context = SessionContext(uuid4(), Channel.HT813_FXO, START)
+    app = FastAPI()
+    app.include_router(operator_router(OperatorCalls(None, SingleSessionGate(), TOKEN, store)))
+    headers = {"Authorization": f"Bearer {TOKEN}"}
+    try:
+        path = await store.record_call_start(context, caller)
+        await store.record_call_end(context, "ended")
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app, client=("127.0.0.1", 1234)),
+            base_url="http://localhost",
+        ) as client:
+            before = await client.get("/operator/inbound-calls", headers=headers)
+            assert before.status_code == 200
+            assert before.json()["items"][0]["caller_number"] == caller
+            blob = bytearray(path.read_bytes())
+            blob[-1] ^= 1
+            path.write_bytes(blob)
+            assert path.stat().st_mode & 0o777 == 0o600
+            response = await client.get("/operator/inbound-calls", headers=headers)
+            assert response.status_code == 503
+            assert response.json() == {"detail": "call history unavailable"}
+            for secret in (caller, str(tmp_path), path.name, TOKEN, key.hex(),
+                           base64.b64encode(key).decode()):
+                assert secret not in response.text
+                assert secret not in caplog.text
+    finally:
         await store.close()
