@@ -63,3 +63,28 @@ PYTHONPATH=apps/orchestrator/src python -m pytest -c apps/orchestrator/pyproject
 ```
 
 실제 조회 도구는 토큰을 보호 파일/getpass로 메모리에서 읽고 번호·본문·토큰을 출력하지 않으며 상태코드/ID 상관관계/턴 역할·시각/일치 boolean만 기록하도록 승인 후 만든다.
+
+## 2026-10-16 관리 정정 후 재개 범위
+
+조회·보존 경계 기존 통합시험의 누락 사례 정적 조사. Gate 2 전 새 통합시험 생성/실행 금지. 앱·공유 문서 수정 금지. 본인 STATUS만 수정 가능. 부모의 현재 승인 방식은 담당 채팅 명시 응답이며 MR 선행 병합은 불필요하다.
+
+
+### 재개 정적 검토 결과 — 완료
+
+현재 승인 방식은 담당 채팅의 Gate 2 명시 응답이다. MR #4 선행 병합은 조건이 아니며 과거 부록 리뷰의 병합 전제는 최신 관리 정정에 의해 대체된다. 부모가 Gate 2 응답 대기 중임을 전달했으며 이 하위 작업에서는 코드/시험 생성·실행·수집·운영 접속을 하지 않았다. 변경 파일은 이 STATUS뿐이다.
+
+기존 시험/요구 재대조:
+- PRD-07/08 (`docs/ideas/prd/0.1.0.md:56,60`) 및 SRS-I06/O04 (`docs/ideas/srs/0.1.0.md:68,89`)는 무음 착신 목록, 대화 없음404, 부분/종료 누락, 원문 없는 손상503, 다른 통화 내용 배제를 요구한다.
+- `test_inbound_call_history.py:82`는 두 INVITE→CANCEL 뒤 목록/페이지/만료만 검증한다. 같은 통화 ID의 텍스트 없음404 및 종료 전 incomplete HTTP 계약은 미검증이다.
+- `test_call_conversation.py:33`의 다른 ID는 WEB이며 전화 두 ID 격리가 아니다. 기존 user-only 부분 턴, 401, remote403, unknown/expired404는 재사용한다.
+- `retention.test.py:249,294`의 손상/incomplete는 저장소 호출이다. 기존 retention 통합5건은 암호화·만료·권한·삭제 경계이며 HTTP503 증거가 아니다.
+
+최소 보강안(승인 후; 신규 파일 불필요):
+1. 기존 inbound 시험에서 INVITE 수락 후 `gate.active_session_id`를 포착한다. CANCEL 이전의 인증된 목록에 해당 ID/status=incomplete/ended_at=null을 정확히 확인하고, CANCEL/lease 해제 뒤 동일 ID=status=ended 및 conversation404를 확인한다. 텍스트 아티팩트0, 가짜 시계의 시작/종료 시각도 대조한다. 이 검증은 시작만 존재하는 조회 의미이며 실제 프로세스 크래시 재현 근거는 아니다.
+2. 기존 conversation 시험에 별도 HT813_FXO ID B를 추가한다(WEB 다른 ID/같은ID 차단 사례 유지). A/B에 구별되는 합성 최종 텍스트를 저장하고 두 HTTP 응답의 session_id와 전체 turns를 각각 정확히 비교한다. A 조회에서 B가 없다는 부정 검사만으로 끝내지 않고 B 조회 성공도 확인한다. 기존 턴/시각 정렬 및 30일 만료도 유지한다.
+3. inbound 파일에 실제 call 암호문 손상→목록503 케이스를 추가한다. startup과 정상200 확인 후 반환된 .va1의 암호문/인증태그 1byte만 변조한다(0600 유지). HTTP body가 일반화된 detail이고 번호/경로/토큰이 없는지 검증한다. store.start 이후 손상시켜 startup 실패와 HTTP 읽기 실패를 혼동하지 않는다.
+4. conversation 파일에 같은 방식의 손상503 케이스를 자기 통화 파일/다른 전화 파일 2조건으로 매개변수화한다. 기존 정상 두 통화의200을 먼저 확인한다. 다른 전화 파일 손상도 현재 `retention.py:284` 전수 스캔/복호화 구조에서503이므로 파일을 건너뛰도록 동작을 바꾸지 않는다. 원문·경로·키·토큰 비노출을 응답 및 수집 로그에서 확인한다. 각 조건은 독립 tmp_path/시험키/시계 및 finally close를 사용한다.
+
+예상 증분: 기존2개 테스트 확장 + 손상3개 실행 사례(목록1, 대화2). 결정적 시작-only 별도 케이스가 필요하면 기존 inbound 파일에 단일 record_call_start→HTTP 테스트를 추가하되 의미가 중복되는 검사를 늘리지 않는다. given/when/then과 VOIC-OPS-008/M10-S2, PRD/SRS 추적을 보강한 테스트 docstring에 명시한다. retention 통합5건·기존 조회2건은 회귀로 재사용한다. 정확한 실행 수는 실제 수집 후 기록하며 지금은 시험 결과가 아니다.
+
+실전화 F02/F03 두 ID의 실제 파일/조회 연결과 청취·문맥은 위 합성 케이스로 대체하지 않는다. 손상은 tmp_path에서만 적용하고 운영 키·파일 복호화/이동은 별도 명시 승인 경계를 따른다. 미해결 사항은 Gate 2 및 실제 전화 경계 검증 대기다.
