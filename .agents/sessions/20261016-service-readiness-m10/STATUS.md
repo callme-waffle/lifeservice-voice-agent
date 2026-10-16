@@ -61,7 +61,9 @@ Gate 2 미승인. 고정 예약·참여자 명단·SSH/배포 경로 재질문�
 
 ## MR / 게시 추적
 
-- [실행안 MR #4](https://github.com/callme-waffle/lifeservice-voice-agent/pull/4): 미병합. 최초 draft 게시 후 log-06 변경을 반영해 검토 가능 상태로 전환 예정; 최종 상태는 GitHub metadata. 생성 2026-10-16 01:41:17 KST. 이 채팅에 연결했다.
+- [실행안 MR #4](https://github.com/callme-waffle/lifeservice-voice-agent/pull/4): 미병합. 2026-10-16 22:47:19 KST ready for review 전환 확인(draft=false, mergeable=true). 생성 2026-10-16 01:41:17 KST. 이 채팅에 연결했다.
 - 본문 로컬 커밋 `76cb5b9822c6aa368ce35721d8a7952b1c74fb77` / 동일 트리 원격 `bce6334a4eb6590c2e75b2fc2acd01a9177eef4a`; 공통 tree `da70160a71d98b53f8aa4690868e7f8a18a60813`.
 - PRD/SRS 독립 커밋별 대응은 log-05에 기록했다. 이후 변경은 게시 기록·이 STATUS뿐이며 최종 SHA는 MR head metadata다. 로컬/원격 commit SHA가 다르므로 원격 ref에 로컬 이력을 강제 push하지 않는다.
 - 최초 준비 작업 게시 완료. 후속 사용자 지시·기존 채팅/현장 읽기 결과 반영은 log-06을 따른다. 다음 행동은 갱신 실행안의 사용자 검토·병합이다. Gate 2 승인 SHA/시각 없음. 실제 시험·배포·실전화 미실행. 서비스 개시 완료 아님.
+
+- log-06 변경 게시: 로컬 `1cb4919c577dba5475caefe1b33d35c3e41d60ca` / 원격 `f513d03312a58aa9d2524d4216e7679fa5fbc746`, 동일 tree `6f47ce0ac79650c22d58d520b35b65348a75df8d`. 이후 게시 기록 커밋의 최종 head는 MR metadata를 따른다.

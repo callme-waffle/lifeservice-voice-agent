@@ -90,3 +90,7 @@ M10 실행안 준비의 후속 기록이다. 사용자의 준비 즉시 요청·
 - [실행안 MR #4](https://github.com/callme-waffle/lifeservice-voice-agent/pull/4)
 - 이전 감독 thread: `01a11673-399a-7290-beb7-b75cb391ca8e`. 회선 종류 turn `01a12135-da51-7312-9010-3568d0fdb1bd`, 기존 발신 대상 turn `01a121a3-4bb8-7773-9fe3-636644462f71`, SSH/배포 관측 turn `01a121b5-66b3-7102-b952-1e9c5a1c93a4`, 최근 진단 turn `01a129d6-bf17-7283-82ca-07a5b4e1650c`.
 - 실제 주소·번호·키·토큰·원문은 공개 기록에 포함하지 않는다.
+
+## 게시 추적
+
+MR #4를 2026-10-16 22:47:19 KST에 ready for review로 전환했다. open/미병합, draft=false, mergeable=true를 확인했다. 실행안 갱신 로컬 `1cb4919c577dba5475caefe1b33d35c3e41d60ca`와 원격 `f513d03312a58aa9d2524d4216e7679fa5fbc746`의 tree `6f47ce0ac79650c22d58d520b35b65348a75df8d`가 일치한다. 이후 변경은 이 게시 기록과 STATUS뿐이며 최종 head는 MR metadata를 따른다.
