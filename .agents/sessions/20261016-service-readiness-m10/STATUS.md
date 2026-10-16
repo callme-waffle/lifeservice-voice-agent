@@ -7,7 +7,7 @@
 |Started|2026-10-16 KST|
 |Last Updated|2026-10-16 KST|
 |Related Issue|[VOIC-OPS-008](../../../docs/records/0_issues/VOIC-OPS-008.md)|
-|Active Plan|[VOIC-OPS-008-plan](../../../docs/records/1_plans/VOIC-OPS-008-plan.md) — approved; 부록 A M10 Gate 2 proposed|
+|Active Plan|[VOIC-OPS-008-plan](../../../docs/records/1_plans/VOIC-OPS-008-plan.md) — approved; 로컬 Gate 2 승인, 실환경 Gate 2 대기|
 |Assigned Milestone|M10|
 
 ## 관리 정정 지시 — 2026-10-16 사용자 최신 요청
@@ -45,31 +45,31 @@ M9 STATUS/log-03의 병합 대기 표기는 당시 상태다. 현재 GitHub MR #
 
 ## 5. Current Work
 
-사용자는 준비 즉시 요청 방식과 참여자 정보 기록 제외를 지시했고 현재 FXS 사용 불가로 응답했다. 부모·M9·이전 감독 채팅을 조회해 SSH identity/known_hosts, Compose 패키지·데이터 경로, 기존 발신 대상/회선을 찾았다. 현재 SSH 읽기 확인으로 모델 healthy/200, backend 부재, 기존 자료 존재, 로컬 비밀 설정 존재를 확인했다. [log-06](../../../docs/records/2_logs/VOIC-OPS-008-log-06.md)에 근거를 남겼다.
+관리 정정 후 실제 코드·검증을 진행했다. [log-08](../../../docs/records/2_logs/VOIC-OPS-008-log-08.md)에 승인과 암호문 1건 검증·BUG-009·로컬 통합 결과를 기록했다. 관측 wrapper 독립 리뷰 수정18 PASS와 F04 웹 점유14 PASS를 완료했다. 고정 후보를 게시하고 실환경 실행 묶음 확인을 요청한다.
 
 ## 6. Verification State
 
-원격 SHA·M9 병합 포함·MR merged metadata 확인. 앱/배포/스크립트/시험 코드 변경 없음. 단위·통합시험·실전화·배포 실행 0. SSH 읽기 조사는 수행했다. 기존 암호문 1건의 로컬 전송/메모리 인증은 자동 승인 검토가 명시 승인 부재로 거절해 미실행이며, 실행안의 명시 승인 대상으로 남겼다. M9 120+3 PASS는 과거 결과다. Markdown 11개·상대 링크 98개 누락 0, 부록 shell block 4개 bash -n 및 diff 통과. 두 독립 검토의 수정 후 미해결 0. 상세는 log-05와 게시 추적을 따른다.
+orchestrator 전체 126 PASS, model-serving 3 PASS. 조회5/보존5/loopback 수명8/probe36 PASS 및 마지막 logging 영향1 PASS. 관측 독립 리뷰 결함 수정 후18 PASS, F04 웹 제어14 PASS. 로컬 통합 Gate 2는 2026-10-16 23:30:40 KST 명시 승인. 기존 암호문1건 메모리 인증·JSON 검증 PASS, 원문·키 출력/저장0. backend 기동·실전화0이며 실제 전화 종료조건은 미검증이다. Compose M10 overlay는 합성 config 병합만 확인했다.
 
 ## 7. Delegated Sub-agents
 
-- telephony-review: 전화 수명/BUG-003 정적 조사 및 부록 리뷰. 본인 sub STATUS만 수정.
-- history-review: 조회/인증/요구 매핑 및 부록 리뷰. 본인 sub STATUS만 수정.
-- Git·공유 문서·운영 판단은 주 담당자가 직렬 처리한다. 운영 환경 조작 없음.
+- telephony-review: BUG-009 및 loopback 완료, 관측 독립 리뷰 4건 수정·18 PASS 완료, 소유권 부모 반환.
+- history-review: 조회/probe 완료, F04 hold/busy14 PASS 완료, 소유권 부모 반환.
+- Git·계획·공유 로그·운영 판단은 부모 직렬 처리. 운영 환경 변경 없음.
 
 ## 8. Blockers
 
-Gate 2 미승인. 고정 예약·참여자 명단·SSH/배포 경로 재질문은 더 이상 차단 항목이 아니다. FXS 사용 불가에 따른 D02 생략과 최대 7시도, 암호문 1건의 메모리 인증을 구체 실행안에 포함했다. 암호문 인증은 민감 데이터의 이동·복호화에 대한 명시 승인이 필요하다. P0/현장 FXO·현재 수신 가능 여부·보호 사본/원복 검증은 실제 배포/통화 직전 조건이다.
+로컬 Gate 2·기존 암호문1건·D02 생략 승인 대기는 해소됐다. 실환경 backend 기동 Gate 2와 매회 발신 응답은 별도 미승인이다. 현 HT813 설정 유지/Caller ID Transport Type/FXO Idle을 사용자에게 확인 요청했다. 보호 사본·manifest·포트·현재 모델 및 장비 준비 확인 뒤 후보 기동한다. 고정 예약·참여자 명단·이미 제공된 접속/번호는 차단 조건이 아니다.
 
 ## 9. Next Action
 
-MR #4 선행 병합 없이 독립 준비·단위 검증을 수행한다. 로컬 격리 통합시험 Gate 2, 기존 암호문 1건 메모리 인증, D02 생략을 담당 채팅에서 각각 명시 확인 요청했다. 응답 전 의존 작업은 실행하지 않는다. 실제 환경 기동 Gate 2와 매 발신 직전 응답은 별도다. P0-A 배포 전→후보 기동→P0-B 기동 후→실전화 순서로 진행한다.
+고정 후보 커밋/MR4 WIP 반영 → 실환경 Gate 2 명시 응답 → P0-A → 후보 backend 기동 → P0-B → 매 발신 직전 응답과 실제 시험. 7시도는 상한이며 M10 완료조건이 아니다. 미검증/실패를 종료조건별 보고한다.
 
 ## 10. Handoff Notes
 
 담당 thread `01a1405f-3b4b-7ef2-81cb-016c3a52beb4`; host `remote-ssh-codex-managed:0535a69a-75b5-4b00-a34d-40c89933dcba`. 부모 `01a14007-f09a-7f43-a8c2-253563abfe26`, M9 `01a14026-e634-7fa3-b392-958f75b2b8e0`와 별개임을 list_threads로 확인했다. send_message_to_thread 미제공으로 직접 송신하지 않았으며 부모가 STATUS/로그/MR을 조회할 수 있다.
 
-실행안 승인 SHA/시각 없음, 결과 MR 없음. M10 결과 MR 병합 후에만 HANDOFF-PROMPT.md로 새 독립 M11 채팅에 인계하며 본 채팅은 M11을 실행하지 않는다. 에이전트 merge/auto-merge 금지. 실제 번호·키·토큰·원문은 공유 기록에 넣지 않는다.
+로컬 승인 시각은 아래 A9 기록을 따른다. 실환경 실행 승인은 미수신이며 MR4는 진행 중이다. M10 결과 MR 병합 후에만 HANDOFF-PROMPT.md로 새 독립 M11 채팅에 인계하며 본 채팅은 M11을 실행하지 않는다. 에이전트 merge/auto-merge 금지. 실제 번호·키·토큰·원문은 공유 기록에 넣지 않는다.
 
 ## MR / 게시 추적
 
@@ -83,3 +83,13 @@ MR #4 선행 병합 없이 독립 준비·단위 검증을 수행한다. 로컬 
 ## 재개 후 실제 검증
 
 [log-07](../../../docs/records/2_logs/VOIC-OPS-008-log-07.md): M10 전용 환경에서 orchestrator 120/model-serving 3 단위 PASS. 기존 임시 venv 수집 실패도 TRY1로 보존. [BUG-009](../../../docs/records/0_issues/VOIC-BUG-009.md) 단위 재현/수정을 telephony-review에 위임. 로컬 격리 Gate2/암호문 1건/D02 예외 응답 대기 중에도 독립 작업 진행. MR4는 draft WIP이며 결과 리뷰 요청 상태가 아님.
+
+## 현재 명시 승인 — 2026-10-16 23:30:40 KST 수신 기록
+
+사용자 답변 call_6195b9fe0f6c4b9f8f705a9cbad2251c: (0) 로컬 격리 시험 생성·실행 승인, (1) 기존 암호문 1건 SSH 이동/메모리 검증 승인, (2) 진단 한계를 기록하고 D02 생략 승인. 실제 환경 기동·실전화 승인은 포함하지 않는다. 기존 대기 문구 중 이 세 범위는 본 기록으로 해소한다.
+
+## 현재 커밋/부모 보고
+
+BUG-009 수정 `45556d0`, 통합 조회·수명·제어 `3f80f06`을 검증 후 커밋했다. 원격 최신 게시 기준은 로컬8b90394/원격d56307f(동일 tree9abb201)이며 다음 게시에서 누적한다. 이전 Verification/게시 절의 실행0 문구는 당시 역사이며 현재 사실은 위 6절과 log-08을 따른다.
+
+사용자는 과거 HT813 설정 유지 확인. FXO Idle/Caller ID Transport Type 구체 값은 미수신. 원격23:53:58 KST 재확인: 모델 ready/이미지 유지, backend 부재, 후보 포트 미점유, Compose5.6.0.

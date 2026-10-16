@@ -4,7 +4,7 @@
 |---|---
 |Agent Name|history-review
 |Parent Session|20261016-service-readiness-m10
-|State|done <!-- static review only -->
+|State|done — approved isolated tests passed|
 |Started|2026-10-16 KST
 |Last Updated|2026-10-16 KST
 
@@ -88,3 +88,92 @@ PYTHONPATH=apps/orchestrator/src python -m pytest -c apps/orchestrator/pyproject
 예상 증분: 기존2개 테스트 확장 + 손상3개 실행 사례(목록1, 대화2). 결정적 시작-only 별도 케이스가 필요하면 기존 inbound 파일에 단일 record_call_start→HTTP 테스트를 추가하되 의미가 중복되는 검사를 늘리지 않는다. given/when/then과 VOIC-OPS-008/M10-S2, PRD/SRS 추적을 보강한 테스트 docstring에 명시한다. retention 통합5건·기존 조회2건은 회귀로 재사용한다. 정확한 실행 수는 실제 수집 후 기록하며 지금은 시험 결과가 아니다.
 
 실전화 F02/F03 두 ID의 실제 파일/조회 연결과 청취·문맥은 위 합성 케이스로 대체하지 않는다. 손상은 tmp_path에서만 적용하고 운영 키·파일 복호화/이동은 별도 명시 승인 경계를 따른다. 미해결 사항은 Gate 2 및 실제 전화 경계 검증 대기다.
+
+## Gate 2 후 구현 위임
+
+사용자 2026-10-16 23:30:40 KST 로컬 격리 통합시험 생성/실행 명시 승인. tests/integrations/call_history/test_call_conversation.py와 test_inbound_call_history.py 두 파일만 코드 소유. 기존 파일 확장·손상503/무발화404/incomplete/두 HT813 세션 격리 검증 수행. 실제 데이터/외부 네트워크 접근 금지. 원본 JUnit은 /tmp/m10-history-*.xml, 표준 로그/Git은 부모 담당.
+
+
+### Gate 2 후 구현·검증 완료 — 2026-10-16 23:32 KST
+
+이 절이 이전 정적 검토 상태를 대체한다. 사용자 23:30:40 KST Gate 2 및 부모 위임에 따라 두 소유 시험 파일만 보강했다. 앱/운영 파일/외부 네트워크/Git 변경 없음.
+
+- test_call_conversation.py: 기존 WEB 격리/정렬/인증/만료 검사를 보존하며 두 HT813_FXO 통화의 양방향 조회를 추가했다. 고유 질문·답변과 생성시각/턴을 검증한다. 실제 암호문 자기 통화/다른 통화 손상 2조건에서 HTTP503 및 응답·수집 로그의 원문/경로/토큰/키 비노출을 검증한다.
+- test_inbound_call_history.py: 기존 합성 SIP INVITE 수락 후 incomplete/ended_at=null, CANCEL 뒤 ended·정확 시각과 동일ID 대화404·텍스트파일0을 확인한다. 기존 목록/페이지/번호null/암호화/만료 검사를 유지한다. call 메타데이터 실제 암호문 손상→HTTP503·비노출 1건 추가.
+- 합성 키/고정 시계/tmp_path/ASGITransport만 사용했다. 손상은 정상 startup/조회200 이후 인증태그의 1byte를 변경했고 파일0600을 확인했다. 신규 대화 손상 케이스는 요청/다른 통화 모두 원래 정상200임을 먼저 확인한다.
+
+실행 TRY1:
+- 시작 UTC 2026-10-16 14:32:23.498662 / KST 23:32:23.498662
+- 종료 UTC 2026-10-16 14:32:28.539417 / KST 23:32:28.539417
+- 실제 경과 5.04075초; pytest 4.58초
+- 결과 5 passed, 1 warning, exit0. warning은 기존 audioop의 Python3.13 제거 예정 경고.
+- 원본 /tmp/m10-history-TRY1.xml, 시간/정확명령 /tmp/m10-history-TRY1.json, 출력 /tmp/m10-history-TRY1.txt
+
+```sh
+PYTHONPATH=apps/orchestrator/src /tmp/voice-agent-m10-venv/bin/python -m pytest -c apps/orchestrator/pyproject.toml tests/integrations/call_history/test_call_conversation.py tests/integrations/call_history/test_inbound_call_history.py -q --junitxml=/tmp/m10-history-TRY1.xml
+```
+
+부모가 표준 시험 로그/영속 로그와 Git 커밋을 처리한다. 본 하위 작업은 보존 기존5건/실제 전화/운영 배포 시험을 수행하지 않았다. 실제 전화→파일→조회와 사용자 청취는 미검증이며 이5건으로 대체하지 않는다. 실패 수정/재실행 없음. 후속 AST compile 및 JUnit 사례별5 PASS 대조 완료(시험 재실행 아님).
+
+## 로컬 검증용 운영 probe 구현 위임
+
+기존 조회 파일 소유권 부모 반환. tests/integrations/ht813/m10_probe.py와 test_m10_probe.py만 소유. 승인된 로컬 합성 HTTP 검증으로 probe 안전 동작을 확인하며 실전화 실행은 금지. 구체 CLI/비공개 설정 계약은 부모 메시지를 따른다. 부모는 m10_live_app.py와 해당 관측 시험을 소유해 파일 충돌을 피한다.
+
+
+### 운영 probe 구현·검증 인계 — 2026-10-16 23:44 KST
+
+소유 두 파일 `tests/integrations/ht813/m10_probe.py`, `test_m10_probe.py` 구현 완료. 기존 조회 파일은 부모에게 반환했으며 이후 수정하지 않았다. Git/index/운영호스트/실전화/외부 네트워크 접근 없음. 부모가 표준로그·문서·커밋을 담당한다.
+
+구현 계약:
+- commands: preflight, reject-dial, dial, cancel, confirm-ring, observe, history. `--config-file` 필수, dial은 `--case F02|C --approval-id <응답참조> --max-seconds <=240`. 고정된 number_file 한 번호만 사용하며 별도 target-alias는 받지 않는다. 웹hold는 부모 담당.
+- config는 base_url/token_file/number_file/state_file 네 키만 허용. literal loopback HTTP+명시port만 허용, DNS/userinfo/path/query/fragment/HTTPS 거부. CLI httpx는 trust_env=False·redirect=False. 상대경로/심볼릭링크/다른사용자/다중hardlink를 거부하며 파일0600, 직접 부모 디렉터리0700/본인소유 필요. state 파일 초기 내용은 {}.
+- State는 fcntl lock과0600 임시파일→원자replace·fsync. case/approval_id 중복을 차단하고 HTTP POST 전에 consumed를 디스크에 확정한다. POST 자동재시도 없음. 응답 소실은 ID가 없으면 정상shutdown 필요로 보고하며 재발신불가.
+- 사용자 confirm-ring 외에는 ring_confirmed를 설정하지 않는다. watchdog는 POST시점부터 monotonic15초이며 active도 벨 확인을 대체하지 않는다. helper가15초 전에 확인을 관측하지 못하면 취소한다. 명시 max_seconds도 취소를 유발한다. HTTP 요청 timeout은2초와 남은deadline의 최소값. DELETE202는 회수완료가 아닌 cancel_requested이며 실제 BYE/Idle은 부모 관측 필요.
+- 별도 cancel중 들어온 낡은GET active가 cancel_requested를 덮어쓰지 않는다. 이미 취소요청된 사례는 DELETE를 자동중복하지 않는다.
+- reject-dial은 config 단일 허용번호와 다른 합성5자리 및 *00/#만 제출한다. 실제 서버allowlist와 config번호의 일치는 P0가 소유한다. 예상외202면 ID저장/DELETE, ID없으면 shutdown_required. 403/422만 통과하고 SIP INVITE0은 별도관측필요로 보고한다.
+- observe는 초기 전체목록 baseline 후 신규ID가 정확1개일 때만 저장, 복수신규ID는 실패. 최대100페이지로 제한한다. 수신event와 실제통화상관은 부모가 확인. F04-A busy는 새 수락ID가 없으므로 observe성공 대상이 아니다.
+- history는 보관ID 각각의 응답ID/턴순서/최소2개 user-assistant 쌍을 검사하며 IDs/본문을출력하지 않는다. distinct_case_ids와content_comparison_required를 분리한다. 실제의미/청취·문맥일치 및 전화외부경계는 판정하지 않는다.
+- stdout은 고정reason/status·사례별칭·boolean 등 메타데이터뿐. 오류문자열/HTTP본문/키/토큰/번호/실제session_id는 출력하지 않는다. CLI가 잠시 HTTP로그를 차단한 뒤 기존로깅상태로 복원한다.
+
+실행 결과(모두 MockTransport·tmp_path·합성비밀, 외부접속0):
+- TRY1: UTC 2026-10-16T14:41:04.286962+00:00 ~ 2026-10-16T14:41:11.041458+00:00, 경과 6.754493초; tests=28, failures=0, errors=0, exit=0. 원본 /tmp/m10-probe-TRY1.xml/.json/.txt
+- TRY2: UTC 2026-10-16T14:43:27.748236+00:00 ~ 2026-10-16T14:43:37.720242+00:00, 경과 9.971996초; tests=36, failures=0, errors=0, exit=0. 원본 /tmp/m10-probe-TRY2.xml/.json/.txt
+- TRY3: UTC 2026-10-16T14:44:41.581295+00:00 ~ 2026-10-16T14:44:42.089764+00:00, 경과 0.508461초; tests=1, failures=0, errors=0, exit=0. 원본 /tmp/m10-probe-TRY3.xml/.json/.txt
+
+TRY1 28PASS 뒤 자체검토로 늦은벨확인·동시취소·정상종료·잘못된상한 검증을 추가했다. TRY2 전체36PASS. 이후 CLI로깅복원 변경의 영향시험만 TRY3 1PASS/35deselected(새실패아님). 각정확명령은 JSON에저장됐다.
+
+```sh
+PYTHONPATH=apps/orchestrator/src /tmp/voice-agent-m10-venv/bin/python -m pytest -c apps/orchestrator/pyproject.toml tests/integrations/ht813/test_m10_probe.py -q --junitxml=/tmp/m10-probe-TRY2.xml
+PYTHONPATH=apps/orchestrator/src /tmp/voice-agent-m10-venv/bin/python -m pytest -c apps/orchestrator/pyproject.toml tests/integrations/ht813/test_m10_probe.py -k argument_errors -q --junitxml=/tmp/m10-probe-TRY3.xml
+```
+
+부모에게 두파일 소유권 반환. 실제환경 도구기동/실전화는 실행하지 않았으며 watchdog 실시간지연과 SIP/FXO회수는 가짜시간검증으로 합격을대신할수없다. 승인참조문자열은 사용자가실제로승인했다는증거 자체가아니므로 부모가응답을확인한뒤에만 호출한다.
+
+## F04 최소 WebSocket 제어 보강
+
+부모가 m10_probe.py 소유권을 회수했다. 후속 소유 파일은 `tests/integrations/ht813/m10_web_probe.py`, `test_m10_web_probe.py` 두 개뿐이다. 기존 wsproto 의존성으로 loopback `/voice`에 인증 연결해 hold/busy 두 명령을 제공한다. 신규 라이브러리/제품 변경 없음. 로컬 fake/loopback 승인 범위만 검증하며 운영 접속0. 부모는 표준 로그와 Git을 담당한다.
+
+
+### F04 웹 제어 보강 완료 — 2026-10-16 23:55 KST
+
+`m10_web_probe.py`, `test_m10_web_probe.py` 두 파일만 추가했다. 기존 m10_probe는 부모 소유로 수정하지 않았다. 신규 의존성·음성 프레임·실전화·운영 접속·Git 변경 없음. 지정 두 파일 소유권을 부모에게 반환한다.
+
+- CLI는 hold|busy, --config-file, --seconds(0초 초과·최대60초)만 제공한다. 기존 Config를 direct script/package 양쪽에서 재사용하며 loopback /voice에 wsproto로 연결한다.
+- 인증 subprotocol은 voice-agent와 token.<비공개 token>이다. 서버의 voice-agent 선택을 검사하고 start JSON을 전송한다.
+- 실제 라우터는 gate 획득 이전에 started를 보내므로 이것만으로 점유 성공을 알리지 않는다. 같은 메모리 session_id의 starting/listening 이벤트 뒤 session_started=true를 즉시 flush한다. UUID는 파일·출력에 남기지 않는다.
+- hold는 음성/무음 PCM 없이 시간을 기다린 뒤 cancel·close를 보낸다. busy는 실제 error/busy를 받아야 성공하며 빈 슬롯의 started/starting은 busy 성공으로 보지 않는다. socket close는 2초 내 정상1000/1001 acknowledgement를 확인한다. 조기 종료·오류·예상치 않은 음성/처리 이벤트는 실패다.
+- stdout은 고정 reason/boolean뿐이며 HTTP debug 로그를 차단하고 종료 뒤 복원한다. 예외 원문·서버 텍스트·번호·token·UUID는 출력하지 않는다.
+- 로컬 시험은 실제 web_voice_router와 가짜 SilentRunner·SingleSessionGate·127.0.0.1 임시 포트를 사용했다. hold 중 실제 두 번째 웹 busy 및 cancel 후 다음 hold를 검증했고 오디오 수신0을 확인했다. direct/package --help는 접속 없이 import 확인한다.
+
+실행 결과:
+- TRY1: UTC 2026-10-16T14:53:18.671245+00:00 ~ 2026-10-16T14:53:21.571904+00:00, 경과 2.900642초; tests=13, failures=1, errors=0, exit=1. 원본 /tmp/m10-web-TRY1.xml/.json/.txt
+- TRY2: UTC 2026-10-16T14:54:11.821819+00:00 ~ 2026-10-16T14:54:14.725101+00:00, 경과 2.903289초; tests=13, failures=0, errors=0, exit=0. 원본 /tmp/m10-web-TRY2.xml/.json/.txt
+- TRY3: UTC 2026-10-16T14:55:07.992683+00:00 ~ 2026-10-16T14:55:10.840265+00:00, 경과 2.847573초; tests=14, failures=0, errors=0, exit=0. 원본 /tmp/m10-web-TRY3.xml/.json/.txt
+
+TRY1 실패 원인: busy JSON과 close 프레임이 같은 TCP 읽기에 도착하면 wsproto는 이미 REMOTE_CLOSING인데 cleanup이 cancel부터 전송하려 해서 close_acknowledged=false가 됐다. 큐의 peer close부터 처리하고 정상 close만 acknowledgement로 인정하도록 수정했다. TRY2 13PASS 후 동일 TCP 읽기를 강제하는 결정적 fake-wsproto 회귀 사례를 추가해 TRY3 14PASS를 확인했다. 기존 assertion은 약화하지 않았다.
+
+```sh
+PYTHONPATH=apps/orchestrator/src /tmp/voice-agent-m10-venv/bin/python -m pytest -c apps/orchestrator/pyproject.toml tests/integrations/ht813/test_m10_web_probe.py -q --junitxml=/tmp/m10-web-TRY3.xml
+```
+
+부모가 표준 로그·영속 기록·Git을 처리한다. 실제 전화↔웹 충돌 및 운영 키/모델 환경은 미검증이다. 이 결과는 가짜 runner를 사용한 실제 로컬 WebSocket/라우터/공유 gate 경계다.
