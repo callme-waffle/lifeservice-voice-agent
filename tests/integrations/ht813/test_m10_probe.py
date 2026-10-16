@@ -405,3 +405,45 @@ def test_voic_ops_008_probe_invalid_deadline_does_not_consume_or_post(tmp_path, 
         with pytest.raises(ProbeError, match="invalid_duration"):
             Probe(config, client).dial("F02", "reply-1", seconds)
     assert not requests and State(config.state_file).read() == {}
+
+
+@pytest.mark.parametrize("confirmed,expected", [(True, "ended"), (False, "ring_timeout")])
+def test_voic_ops_008_explicit_confirmation_grace_is_bounded_and_single_attempt(tmp_path, confirmed, expected):
+    """Given separately approved retry/grace, when a chat report arrives at20s, then accept only before45s or cancel once."""
+    path, _ = setup_config(tmp_path)
+    config, clock, methods = Config.load(path), Clock(), []
+    State(config.state_file).consume("F02", "first-consumed-reply")
+    if confirmed:
+        def reported():
+            if clock.now == 20:
+                State(config.state_file).confirm_ring("F02-R1")
+        clock.on_sleep = reported
+    def handler(request):
+        methods.append(request.method)
+        if request.method in {"POST", "DELETE"}:
+            return httpx.Response(202, json={"session_id": SID_B})
+        return httpx.Response(200, json={"session_id": SID_B,
+                                       "status": "ended" if confirmed and clock.now >= 21 else "active"})
+    with httpx.Client(transport=httpx.MockTransport(handler)) as client:
+        probe = Probe(config, client, clock=clock.monotonic, sleep=clock.sleep)
+        with pytest.raises(ProbeError, match="attempt_already_consumed"):
+            probe.dial("F02-R1", "first-consumed-reply", 240, confirmation_seconds=45)
+        result = probe.dial("F02-R1", "new-explicit-reply", 240, confirmation_seconds=45)
+        with pytest.raises(ProbeError, match="attempt_already_consumed"):
+            probe.dial("F02-R1", "another-reply", 240, confirmation_seconds=45)
+    assert result.get("status", result.get("reason")) == expected
+    assert methods.count("POST") == 1
+    assert methods.count("DELETE") == (0 if confirmed else 1)
+    assert clock.now == (21 if confirmed else 45)
+    assert State(config.state_file).read()["F02"]["approval_id"] == "first-consumed-reply"
+
+
+@pytest.mark.parametrize("seconds", [14,46,float("nan"),float("inf")])
+def test_voic_ops_008_invalid_confirmation_grace_never_posts(tmp_path, seconds):
+    """Given an out-of-range confirmation window, when requested, then reject before consumption or network."""
+    path, _ = setup_config(tmp_path)
+    config = Config.load(path)
+    with httpx.Client(transport=httpx.MockTransport(lambda _: pytest.fail("unexpected HTTP"))) as client:
+        with pytest.raises(ProbeError, match="invalid_confirmation_window"):
+            Probe(config, client).dial("F02-R1", "new-reply", 240, confirmation_seconds=seconds)
+    assert State(config.state_file).read() == {}

@@ -28,7 +28,7 @@ from uuid import UUID
 import httpx
 
 
-CASES = {"F02", "C", "F03", "F04-A", "F04-B", "F05", "P"}
+CASES = {"F02", "F02-R1", "C", "F03", "F04-A", "F04-B", "F05", "P"}
 REJECT_CASES = {"F01-NUMBER", "F01-STAR", "F01-HASH"}
 CALL_STATUSES = {"dialing", "ringing", "active", "busy", "failed", "ended"}
 STATE_STATUSES = CALL_STATUSES | {"posting", "observing", "accepted", "cancel_requested"}
@@ -194,7 +194,7 @@ class State:
     def consume(self, case: str, approval_id: str = "", status: str = "posting") -> None:
         if case not in CASES | REJECT_CASES:
             raise ProbeError("invalid_case")
-        if case in {"F02", "C"} and not re.fullmatch(r"[A-Za-z0-9_.:-]{1,128}", approval_id):
+        if case in {"F02", "F02-R1", "C"} and not re.fullmatch(r"[A-Za-z0-9_.:-]{1,128}", approval_id):
             raise ProbeError("approval_reference_required")
         with self.locked():
             data = self._read()
@@ -238,7 +238,7 @@ class State:
         with self.locked():
             data = self._read()
             item = data.get(case)
-            if (case not in {"F02", "C"} or not item or not item["session_id"]
+            if (case not in {"F02", "F02-R1", "C"} or not item or not item["session_id"]
                     or item["status"] not in {"accepted", "dialing", "ringing", "active"}):
                 raise ProbeError("ring_confirmation_not_applicable")
             item["ring_confirmed"] = True
@@ -308,16 +308,18 @@ class Probe:
         except (ProbeError, OSError):
             return {"ok": False, "case": case, "reason": code, "shutdown_required": True}
 
-    def dial(self, case: str, approval_id: str, max_seconds: float) -> dict:
-        if case not in {"F02", "C"}:
+    def dial(self, case: str, approval_id: str, max_seconds: float, *, confirmation_seconds: float = 15) -> dict:
+        if case not in {"F02", "F02-R1", "C"}:
             raise ProbeError("invalid_case")
         max_seconds = bounded_seconds(max_seconds)
+        if not math.isfinite(confirmation_seconds) or not 15 <= confirmation_seconds <= 45:
+            raise ProbeError("invalid_confirmation_window")
         self.state.consume(case, approval_id)
         started = self.clock()  # Consumption is fsynced before the single POST.
         ring_seen_in_time = False
         try:
             response = self.request("POST", "/operator/calls", json={"number": self.config.number},
-                                    timeout_s=min(2, max_seconds, 15))
+                                    timeout_s=min(2, max_seconds, confirmation_seconds))
             if response.status_code != 202:
                 self.state.update(case, status="failed")
                 return {"ok": False, "case": case, "http_status": response.status_code,
@@ -327,9 +329,9 @@ class Probe:
             while True:
                 item = self.state.read()[case]
                 elapsed = self.clock() - started
-                if elapsed < 15 and item["ring_confirmed"]:
+                if elapsed < confirmation_seconds and item["ring_confirmed"]:
                     ring_seen_in_time = True
-                if not ring_seen_in_time and elapsed >= 15:
+                if not ring_seen_in_time and elapsed >= confirmation_seconds:
                     return self._abort(case, "ring_timeout")
                 if elapsed >= max_seconds:
                     return self._abort(case, "occupancy_timeout")
@@ -337,7 +339,7 @@ class Probe:
                     return {"ok": False, "case": case, "cancel_requested": True,
                             "shutdown_required": False, "reason": "operator_cancelled"}
                 remaining_deadline = min(max_seconds - elapsed,
-                                         15 - elapsed if not ring_seen_in_time else max_seconds)
+                                         confirmation_seconds - elapsed if not ring_seen_in_time else max_seconds)
                 response = self.request("GET", f"/operator/calls/{sid}",
                                         timeout_s=min(2, remaining_deadline))
                 if response.status_code != 200:
@@ -348,9 +350,9 @@ class Probe:
                     return self._abort(case, "invalid_status")
                 item = self.state.refresh_status(case, status)
                 elapsed = self.clock() - started
-                if elapsed < 15 and item["ring_confirmed"]:
+                if elapsed < confirmation_seconds and item["ring_confirmed"]:
                     ring_seen_in_time = True
-                if not ring_seen_in_time and elapsed >= 15:
+                if not ring_seen_in_time and elapsed >= confirmation_seconds:
                     return self._abort(case, "ring_timeout")
                 if elapsed >= max_seconds:
                     return self._abort(case, "occupancy_timeout")
@@ -362,7 +364,7 @@ class Probe:
                             "status": status, "ring_confirmed": ring_seen_in_time,
                             "shutdown_required": False}
                 remaining = min(max_seconds - (self.clock() - started),
-                                15 - (self.clock() - started) if not ring_seen_in_time else 1)
+                                confirmation_seconds - (self.clock() - started) if not ring_seen_in_time else 1)
                 self.sleep(max(0, min(1, remaining)))
         except (ProbeError, OSError, KeyboardInterrupt):
             # A lost POST response must never lead to another POST.
@@ -494,6 +496,7 @@ def main(argv=None) -> int:
         parser.add_argument("--case")
         parser.add_argument("--approval-id")
         parser.add_argument("--max-seconds", type=float, default=240)
+        parser.add_argument("--ring-confirmation-seconds", type=float, default=15)
         args = parser.parse_args(argv)
         config = Config.load(args.config_file)
         with httpx.Client(trust_env=False, follow_redirects=False) as client:
@@ -503,7 +506,8 @@ def main(argv=None) -> int:
             elif args.command == "reject-dial":
                 result = probe.reject_dial()
             elif args.command == "dial":
-                result = probe.dial(args.case, args.approval_id or "", args.max_seconds)
+                result = probe.dial(args.case, args.approval_id or "", args.max_seconds,
+                                    confirmation_seconds=args.ring_confirmation_seconds)
             elif args.command == "cancel":
                 result = probe.cancel(args.case)
             elif args.command == "confirm-ring":
