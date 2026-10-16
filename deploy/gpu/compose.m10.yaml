@@ -1,0 +1,30 @@
+# VOIC-OPS-008 M10: temporary supervised backend; live Gate 2 required.
+# Combine with compose.yaml and compose.backend.yaml. Never start dependencies.
+services:
+  backend:
+    image: ${M10_BACKEND_IMAGE:?fixed candidate image required}
+    restart: "no"
+    stop_grace_period: 15s
+    environment:
+      VOICE_AGENT_API_HOST: "127.0.0.1"
+      VOICE_AGENT_API_PORT: "8000"
+      VOICE_AGENT_HT813_INBOUND_ENABLED: "true"
+      VOICE_AGENT_HT813_FXO_SIP_PORT: ${VOICE_AGENT_HT813_FXO_SIP_PORT:-5062}
+      VOICE_AGENT_HT813_LOCAL_SIP_PORT: ${VOICE_AGENT_HT813_LOCAL_SIP_PORT:-5060}
+      VOICE_AGENT_HT813_LOCAL_RTP_PORT: ${VOICE_AGENT_HT813_LOCAL_RTP_PORT:-4000}
+      VOICE_AGENT_HT813_INBOUND_SIP_PORT: ${VOICE_AGENT_HT813_INBOUND_SIP_PORT:-5061}
+      VOICE_AGENT_HT813_INBOUND_RTP_PORT: ${VOICE_AGENT_HT813_INBOUND_RTP_PORT:-4002}
+      VOICE_AGENT_HT813_ALLOWED_PREFIXES: ""
+    volumes:
+      - type: bind
+        source: ${M10_HARNESS_DIR:?candidate harness directory required}
+        target: /opt/m10
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${M10_RUNTIME_DIR:?private tmpfs runtime directory required}
+        target: /run/m10
+        bind:
+          create_host_path: false
+    command: ["python", "/opt/m10/m10_live_app.py", "--mapping-file", "/run/m10/map.json", "--seconds", "1800"]
