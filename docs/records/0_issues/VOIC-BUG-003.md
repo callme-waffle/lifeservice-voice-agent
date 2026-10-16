@@ -39,3 +39,8 @@ SIP 연결 성공과 외부 휴대전화 착신은 서로 다른 경계이며, �
 - [M6 승인 계획](../1_plans/VOIC-FEAT-001-plan-02.md)
 - [HT813 1단계 발신 설명](https://documentation.grandstream.com/knowledge-base/ht813-faq/)
 - [HT813 피어링 설정](https://documentation.grandstream.com/knowledge-base/peering-ip-phone-with-ht813/)
+
+
+## 2026-10-17 M10 후속 재현
+
+첫 M10 창은 실제벨2회 성공했으나, 같은 backend 후보7e9865a·같은 모델을 사용하고 에이전트가 장비 설정을 변경하지 않은 조건으로 두번째창01:16:43 KST 발신1회에서 실제벨없음을 사용자가 확인했다. 서버는SIP180/200/active 및 전사/응답각1을 관측했지만 이를 실제수신으로 인정하지 않는다. 45초 제한취소·정상backend종료/제거 후 사용자FXOIdle 확인. 정확허용목록과 제어대상 일치/접두사없음은 확인했고 아날로그실제다이얼 원인은미확정이다. 추가발신0, FXS 독립진단한계유지, 이슈열림. 원문·번호·음성은공유하지않았다. 상세는 [OPS-008-log-10](../2_logs/VOIC-OPS-008-log-10.md).
