@@ -3,11 +3,11 @@
 |key|value|
 |---|---|
 |Session ID|20261016-service-readiness-m10|
-|State|active — 관리 정정 수신·구현/검증 재개|
+|State|M10 진행 중 — 첫 실환경 창 종료·원복, 잔여 실전화 입력 대기|
 |Started|2026-10-16 KST|
-|Last Updated|2026-10-16 KST|
+|Last Updated|2026-10-17 00:32 KST|
 |Related Issue|[VOIC-OPS-008](../../../docs/records/0_issues/VOIC-OPS-008.md)|
-|Active Plan|[VOIC-OPS-008-plan](../../../docs/records/1_plans/VOIC-OPS-008-plan.md) — approved; 로컬 Gate 2 승인, 실환경 Gate 2 대기|
+|Active Plan|[VOIC-OPS-008-plan](../../../docs/records/1_plans/VOIC-OPS-008-plan.md) — approved; 첫 실환경 Gate 2 실행·종료, 다음 창 별도 승인 필요|
 |Assigned Milestone|M10|
 
 ## 관리 정정 지시 — 2026-10-16 사용자 최신 요청
@@ -93,3 +93,24 @@ orchestrator 전체 126 PASS, model-serving 3 PASS. 조회5/보존5/loopback 수
 BUG-009 수정 `45556d0`, 통합 조회·수명·제어 `3f80f06`을 검증 후 커밋했다. 원격 최신 게시 기준은 로컬8b90394/원격d56307f(동일 tree9abb201)이며 다음 게시에서 누적한다. 이전 Verification/게시 절의 실행0 문구는 당시 역사이며 현재 사실은 위 6절과 log-08을 따른다.
 
 사용자는 과거 HT813 설정 유지 확인. FXO Idle/Caller ID Transport Type 구체 값은 미수신. 원격23:53:58 KST 재확인: 모델 ready/이미지 유지, backend 부재, 후보 포트 미점유, Compose5.6.0.
+
+## 실환경 실행 승인과 실제 준비 — 2026-10-17 00:10 KST 기록
+
+사용자 call_125a9bc64dd14a7dbd333cf98f489b98은 후보7e9865a의 별도 배치·backend-only 빌드/최대30분 기동, 기존 비밀 SSH/tmpfs 주입·동일 데이터/30일 정책, 최대7시도/발신별 직전 응답, 정상 종료/부재 원복을 승인했다. FXO Idle 확인. Caller ID Transport Type은 현재 확인 어렵지만 우선 발신 지시: 발신 차단 조건에서 제외하고 실제 착신 헤더/번호 판정은 미검증 유지, 기존 from 기본값 적용, 장비 설정 변경0.
+
+보호 사본 전체 재귀복사는 자동 승인 검토가 payload 범위 초과로 거절하여 미실행. 96개(18,183,748 bytes)로 구체화한 확인 요청에 사용자가 사유를 물었고, 설명 후 **“복사없이 그냥 진행하세요”**라고 명시 지시했다. 이번 M10의 사본 선행조건을 제거한다. 암호문 복사0, 원본96개 해시 manifest만 보호 tmpfs에 기록했다. 기존 키·토큰·허용번호는 앞서 승인된 SSH/tmpfs 주입을 완료했다. 원본 데이터 변경0, 원문/키 출력0.
+
+별도 원격 checkout7e9865a/tree df77212c 및 bundle SHA 일치 확인. 실제 Compose private config 검증/backend-only 이미지 빌드 진행 중, backend 기동·발신 아직0. 로컬/원격 후보 대응:7e9865a/b19efbf3, 같은 tree df77212c. MR4에5개 검증 커밋 게시 완료(draft WIP).
+
+다음: 빌드 결과 → P0-A 마지막 모델/포트/원본 확인 → 단일 후보 기동·30분 deadline 기록 → P0-B/F01 → 첫 실제 발신 직전 별도 요청. Caller ID 미확인을 발신 차단으로 재요구하지 않는다. 보호 사본 재요청/재생성 금지. 기존 데이터 보존 여부는 종료 후 원본 manifest로 비교하고 정상 만료/신규 파일과 구분한다.
+
+
+## 현재 상태 정정 — 2026-10-17 첫 실환경 창 종료 (이 절이 이전 진행 상태를 대체)
+
+실제 상태는 [log-09](../../../docs/records/2_logs/VOIC-OPS-008-log-09.md)를 따른다. 이전 “빌드 진행/실전화0/실환경 승인 대기”는 과거 상태이며 현재 상태와 불일치해 정정한다.
+
+- 후보7e9865a/tree df77212c backend 기동00:10:31, 제어 도구9efd3fb(42PASS). F02/F02-R1 발신2 + F03 착신1 =3시도. 추가1회 승인으로 상한8이었으나 소진하지 않았다. 발신별 승인/벨 확인과 물리Idle 예외는 계획A11~13/log-09.
+- 발신2답변 청취·착신4턴/DTMF5/#·서버종료 회수·실제 동일ID 조회 확인. 사용자 착신 문맥 회상 보고와 저장 문자열 불일치, 착신번호null은 미해결. 발신 문맥/DTMF·물리Idle/버튼기준10초·충돌·특정 단계 취소/다음전화·CallerID변형/실제다건페이지·BUG-003은 미완료.
+- 사용자 지금 추가F04-A/B 불가. 00:30:00 정상종료(exit0), 시험backend 제거/6개포트해제/tmpfs비밀정리. 원본96개 해시/권한동일, 신규데이터보존, STT/TTS image동일/running/healthy. 물리FXOIdle 미확인. 후보소스/이미지는 남아 있으나 자동재기동서비스0.
+- 승인된 로컬 시험은 유지. 실제 다음 창은 새 구체Gate2+매발신직전응답 필요. 기존창/응답 재사용 금지. 고정 일정·참여자·기존접속 재요청 금지. 사본 생성/재요청 금지.
+- 다음 작업: log-09·표준TRY 증거·계획 정정을 MR4 draft WIP에 게시하고, 잔여 검증의 다음 창을 준비한다. M10 완료/최종리뷰/M11 인계가 아니다. 부모는 이 STATUS/log-09/MR4에서 실제 결과를 확인한다.
