@@ -89,6 +89,8 @@ python -m pytest -c apps/orchestrator/pyproject.toml -o python_files='test_*.py'
 - M10 회선 이슈가 해결됐다고 보고하지 않는다. 실제 착신/발신과 에코·재생 중 발화·종료를 다시 판정해야 한다.
 - [운영 절차](../../guides/voice-provider-operation.md)에 키 주입, 실행, health 해석, 원복, 관측과 다음 시험 입력을 기록했다.
 
+최종 구현 커밋: `3952833` (`codex/voice-providers`). 최종 소스 이미지 재빌드 성공. 운영 배포·실제 API/전화 실행 없음.
+
 # 6. 참고자료
 
 - [OpenAI Live WebSocket](https://developers.openai.com/api/docs/guides/voice-websockets)

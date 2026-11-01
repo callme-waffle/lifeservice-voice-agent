@@ -28,7 +28,7 @@ See [execution evidence](../../../docs/records/2_logs/VOIC-FEAT-010-log-03.md). 
 
 ## 5. Current Work
 
-Local implementation, evidence and source review complete; committing prepared result. Real acceptance remains separate from local preparation.
+Local implementation, evidence and source review committed as 3952833. Real acceptance remains separate from local preparation.
 
 ## 6. Verification State
 
@@ -44,7 +44,7 @@ Real API key injection/model access; actual test host/window/numbers/budget; rea
 
 ## 9. Next Action
 
-Finish commit and report prepared state. When user supplies operational inputs securely, execute approved real API/call acceptance and record measured latency, echo, usage, cleanup and rollback.
+Report prepared state. Await secure operational key injection and concrete real-test inputs; obtain real API/call Gate 2 before execution and per-dial approval. Record measured latency, echo, usage, cleanup and rollback.
 
 ## 10. Handoff Notes
 
