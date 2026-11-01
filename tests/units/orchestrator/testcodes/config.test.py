@@ -128,3 +128,48 @@ def test_voic_feat_001_m6_s1_t6_requires_private_retention_key_and_policy():
     settings = Settings.from_env(valid_env())
     assert len(settings.data_encryption_key) == 32
     assert settings.data_encryption_key not in repr(settings).encode()
+
+
+@pytest.mark.parametrize("provider", ["", "openai", "ONPREM"])
+def test_voic_feat_010_rejects_unknown_provider(provider):
+    """Given an invalid selection, when loading, then fail rather than switch providers."""
+    with pytest.raises(ValueError, match="VOICE_AGENT_VOICE_PROVIDER"):
+        Settings.from_env(valid_env() | {"VOICE_AGENT_VOICE_PROVIDER": provider})
+
+
+def test_voic_feat_010_live_ignores_unused_model_settings():
+    """Given Live and stale model values, when loading, then only Live dependencies matter."""
+    env = valid_env() | {"VOICE_AGENT_VOICE_PROVIDER": "openai_live",
+                         "VOICE_AGENT_OPENAI_API_KEY": "live-test-secret",
+                         "VOICE_AGENT_STT_MODEL_ID": "invalid",
+                         "VOICE_AGENT_TTS_SPEED": "invalid",
+                         "VOICE_AGENT_STT_ENDPOINT": "not-a-url",
+                         "VOICE_AGENT_STT_TIMEOUT_SECONDS": "invalid"}
+    settings = Settings.from_env(env)
+    assert settings.stt_endpoint is None and settings.tts_endpoint is None
+    assert settings.live_model == "gpt-live-1" and settings.live_queue_ms == 500
+    assert "live-test-secret" not in repr(settings)
+    env.pop("VOICE_AGENT_OPENAI_API_KEY")
+    with pytest.raises(ValueError, match="VOICE_AGENT_OPENAI_API_KEY"):
+        Settings.from_env(env)
+
+
+def test_voic_feat_010_onprem_ignores_live_settings():
+    """Given default mode, when Live settings are stale, then onprem still loads."""
+    assert Settings.from_env(valid_env() | {"VOICE_AGENT_OPENAI_API_KEY_FILE": "/missing",
+        "VOICE_AGENT_OPENAI_LIVE_CONNECT_TIMEOUT_SECONDS": "bad"}).voice_provider == "onprem"
+
+
+@pytest.mark.parametrize("key,value", [
+    ("VOICE_AGENT_OPENAI_LIVE_CONNECT_TIMEOUT_SECONDS", "nan"),
+    ("VOICE_AGENT_OPENAI_LIVE_DRAIN_TIMEOUT_SECONDS", "inf"),
+    ("VOICE_AGENT_OPENAI_LIVE_DRAIN_TIMEOUT_SECONDS", "0"),
+    ("VOICE_AGENT_LIVE_AUDIO_QUEUE_MAX_MS", "39"),
+    ("VOICE_AGENT_LIVE_AUDIO_QUEUE_MAX_MS", "2001"),
+    ("VOICE_AGENT_OPENAI_LIVE_MODEL", " "),
+])
+def test_voic_feat_010_live_rejects_unbounded_settings(key, value):
+    """Given invalid live limits, when loading, then reject before networking."""
+    with pytest.raises(ValueError):
+        Settings.from_env(valid_env() | {"VOICE_AGENT_VOICE_PROVIDER": "openai_live",
+            "VOICE_AGENT_OPENAI_API_KEY": "test", key: value})
