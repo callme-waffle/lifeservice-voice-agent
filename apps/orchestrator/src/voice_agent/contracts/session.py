@@ -132,7 +132,22 @@ class PublicError:
             raise ValueError("public error message must be 1..160 characters")
 
 
-EventPayload = SessionState | CallState | Transcript | TaskResult | DtmfEvent | PublicError
+@dataclass(frozen=True, slots=True)
+class LiveTranscript:
+    text: str
+    direction: str
+    start_ms: int
+    end_ms: int
+    partial: bool = True
+
+    def __post_init__(self):
+        if self.direction not in ("input", "output") or not self.text:
+            raise ValueError("invalid Live transcript")
+        if self.start_ms < 0 or self.end_ms < self.start_ms:
+            raise ValueError("invalid Live transcript timing")
+
+
+EventPayload = LiveTranscript | SessionState | CallState | Transcript | TaskResult | DtmfEvent | PublicError
 
 
 @dataclass(frozen=True, slots=True)
@@ -146,7 +161,7 @@ class EventEnvelope:
             raise ValueError("event sequence must be nonnegative")
         if isinstance(self.payload, DtmfEvent) and self.payload.session_id != self.session_id:
             raise ValueError("DTMF session does not match envelope")
-        if not isinstance(self.payload, (SessionState, CallState, Transcript, TaskResult, DtmfEvent, PublicError)):
+        if not isinstance(self.payload, (LiveTranscript, SessionState, CallState, Transcript, TaskResult, DtmfEvent, PublicError)):
             raise TypeError("unsupported event payload")
 
 

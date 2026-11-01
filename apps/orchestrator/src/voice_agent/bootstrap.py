@@ -43,12 +43,23 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         key=settings.data_encryption_key,
         sweep_interval_s=settings.retention_sweep_interval_s,
     )
-    stt = RemoteSTT(settings.stt_endpoint, settings.timeouts.stt_s) if settings.stt_endpoint else FasterWhisperSTT(settings.stt_model)
-    tts = RemoteTTS(settings.tts_endpoint, settings.timeouts.tts_s) if settings.tts_endpoint else MeloTTSAdapter(settings.tts_speed)
-    runner = VoiceOrchestrator(
-        stt, task, tts,
-        gate, settings.timeouts, settings.buffer_capacity, retention,
-    )
+    if settings.voice_provider == "openai_live":
+        from voice_agent.adapters.live import OpenAILive
+        from voice_agent.core.live import LiveRunner
+        stt = tts = None
+        runner = LiveRunner(
+            OpenAILive(settings.openai_key, settings.live_model, settings.live_voice,
+                       settings.live_connect_timeout_s), task, gate, retention,
+            drain_s=settings.live_drain_timeout_s, queue_ms=settings.live_queue_ms,
+            task_timeout_s=settings.timeouts.task_s,
+        )
+    else:
+        stt = RemoteSTT(settings.stt_endpoint, settings.timeouts.stt_s) if settings.stt_endpoint else FasterWhisperSTT(settings.stt_model)
+        tts = RemoteTTS(settings.tts_endpoint, settings.timeouts.tts_s) if settings.tts_endpoint else MeloTTSAdapter(settings.tts_speed)
+        runner = VoiceOrchestrator(
+            stt, task, tts,
+            gate, settings.timeouts, settings.buffer_capacity, retention,
+        )
     outbound = None
     if settings.allowed_numbers is not None:
         outbound = HT813Outbound(
@@ -126,6 +137,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @app.get("/health")
     async def health() -> dict[str, str]:
+        if settings.voice_provider == "openai_live":
+            return {"status": "ready" if app.state.ready and retention.ready else
+                    "degraded" if app.state.ready else "stopping",
+                    "provider": "openai_live", "remote": runner.remote_status}
         if not settings.stt_endpoint:
             return {"status": "ready" if app.state.ready and retention.ready else
                     "degraded" if app.state.ready else "stopping"}

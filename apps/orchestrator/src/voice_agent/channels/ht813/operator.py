@@ -126,7 +126,7 @@ def operator_router(service: OperatorCalls) -> APIRouter:
             result = await asyncio.to_thread(service.retention.list_conversation, session_id)
         except RetentionUnavailable:
             raise HTTPException(503, "conversation history unavailable") from None
-        if not result["turns"]:
+        if not result["turns"] and not result.get("segments"):
             raise HTTPException(404, "conversation not found")
         return result
 

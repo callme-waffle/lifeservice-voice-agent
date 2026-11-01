@@ -178,6 +178,24 @@ class EncryptedRetention:
             self.last_error_code = "write_failed"
             raise RetentionUnavailable("retention write failed") from None
 
+    async def record_live_audio(self, context, direction, start_sample, pcm):
+        if direction not in ("input", "generated", "sent") or len(pcm) > 320_000:
+            raise ValueError("invalid Live recording segment")
+        return await self._record(self.recordings_dir, {
+            "schema_version": 2, "provider": "openai_live", "kind": "audio_segment",
+            "session_id": str(context.session_id), "channel": context.channel.value,
+            "direction": direction, "start_sample": start_sample,
+            "end_sample": start_sample + len(pcm) // 2, "sample_rate": 16000,
+            "data_b64": base64.b64encode(pcm).decode("ascii"),
+        })
+
+    async def record_live_text(self, context, index, fragment):
+        return await self._record(self.transcripts_dir, {
+            "schema_version": 2, "provider": "openai_live", "kind": "live_transcript",
+            "session_id": str(context.session_id), "channel": context.channel.value,
+            "segment_index": index, **fragment,
+        })
+
     async def record_audio(
         self, context: SessionContext, turn_index: int,
         direction: str, pcm: bytes,
@@ -281,6 +299,7 @@ class EncryptedRetention:
             raise RetentionUnavailable("retention is unavailable")
         now = self._now()
         turns: list[dict[str, object]] = []
+        segments: list[dict[str, object]] = []
         for path in self.transcripts_dir.glob("*.va1"):
             created, payload = self.read_artifact(path)
             if self.expired(created, now):
@@ -289,6 +308,19 @@ class EncryptedRetention:
                 artifact_session = UUID(str(payload["session_id"]))
                 channel = payload["channel"]
                 kind = payload["kind"]
+                if kind == "live_transcript":
+                    from voice_agent.contracts.session import LiveTranscript
+                    fragment = LiveTranscript(payload["text"], payload["direction"],
+                                              payload["start_ms"], payload["end_ms"], payload["partial"])
+                    index = payload["segment_index"]
+                    if not isinstance(index, int) or index < 0:
+                        raise ValueError
+                    if artifact_session == session_id and channel == "ht813_fxo":
+                        segments.append({"segment_index": index, "text": fragment.text,
+                                         "direction": fragment.direction, "start_ms": fragment.start_ms,
+                                         "end_ms": fragment.end_ms, "partial": fragment.partial,
+                                         "created_at": created.isoformat()})
+                    continue
                 turn_index = payload["turn_index"]
                 value = payload["text"]
                 if (channel not in ("web", "ht813_fxo")
@@ -307,7 +339,11 @@ class EncryptedRetention:
                 })
         turns.sort(key=lambda item: (item["turn_index"], item["created_at"],
                                      item["speaker"] != "user"))
-        return {"session_id": str(session_id), "turns": turns}
+        result = {"session_id": str(session_id), "turns": turns}
+        if segments:
+            result["provider"] = "openai_live"
+            result["segments"] = sorted(segments, key=lambda item: item["segment_index"])
+        return result
 
     @staticmethod
     def expired(created: datetime, now: datetime) -> bool:

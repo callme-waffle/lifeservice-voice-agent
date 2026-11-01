@@ -112,3 +112,23 @@ def test_voic_feat_001_m6_s3_backend_health_checks_both_model_endpoints():
             assert result == {"status": "degraded", "stt": "ready", "tts": "unavailable"}
 
     asyncio.run(run())
+
+
+def test_voic_feat_010_live_assembly_never_constructs_onprem_models(monkeypatch):
+    """Given Live selection, no GPU model is constructed and health does not call OpenAI."""
+    import voice_agent.bootstrap as bootstrap
+    def forbidden(*args, **kwargs):
+        raise AssertionError("unused onprem dependency")
+    monkeypatch.setattr(bootstrap, 'FasterWhisperSTT', forbidden)
+    monkeypatch.setattr(bootstrap, 'MeloTTSAdapter', forbidden)
+    env = valid_env() | {'VOICE_AGENT_VOICE_PROVIDER': 'openai_live',
+                         'VOICE_AGENT_OPENAI_API_KEY': 'test-only-key'}
+    del env['VOICE_AGENT_STT_MODEL_ID']
+    app = create_app(Settings.from_env(env))
+    assert app.state.runner.continuous_input
+    health = next(r for r in app.routes if getattr(r, 'path', None) == '/health')
+    app.state.ready = app.state.retention.ready = True
+    assert asyncio.run(health.endpoint()) == {
+        'status': 'ready', 'provider': 'openai_live', 'remote': 'unverified'}
+    app.state.retention.ready = False
+    assert asyncio.run(health.endpoint())['status'] == 'degraded'

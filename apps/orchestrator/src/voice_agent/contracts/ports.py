@@ -71,6 +71,14 @@ class RetentionUnavailable(Exception):
 
 
 class ArtifactRetention(Protocol):
+    async def record_live_audio(
+        self, context: SessionContext, direction: str, start_sample: int, pcm: bytes,
+    ) -> object: ...
+
+    async def record_live_text(
+        self, context: SessionContext, index: int, fragment: dict[str, object],
+    ) -> object: ...
+
     async def record_audio(
         self, context: SessionContext, turn_index: int, direction: str, pcm: bytes,
     ) -> object: ...
@@ -78,3 +86,13 @@ class ArtifactRetention(Protocol):
     async def record_text(
         self, context: SessionContext, turn_index: int, kind: str, value: str,
     ) -> object: ...
+
+
+class ContinuousSessionRunner(VoiceSessionRunner, Protocol):
+    continuous_input: bool
+
+    async def run(
+        self, context: SessionContext, incoming: AsyncIterator[AudioChunk],
+        events: EventSink, send_audio: Callable[[AudioChunk], Awaitable[None]],
+        cancel: CancellationToken, *, lease: SessionLease | None = None,
+    ) -> None: ...
