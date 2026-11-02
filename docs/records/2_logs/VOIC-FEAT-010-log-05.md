@@ -91,3 +91,7 @@ I는 단위가 아니라 계획의 Integration(통합시험) 식별자다.
 - [이전 실제 API·착신 결과](VOIC-FEAT-010-log-04.md)
 - [운영 가이드](../../guides/voice-provider-operation.md)
 - [PR #5](https://github.com/callme-waffle/lifeservice-voice-agent/pull/5)
+
+## 설정 갱신 후 재확인 — 2026-11-02T10:27:28.913380+09:00
+
+사용자가 “기록 완료”로 설정 갱신을 알렸다. 현재 환경을 다시 읽어 합성 정정 문맥 요청 1회를 준비했으나 어댑터 생성 단계에서 중단됐다. HTTPS 및 /v1 경로는 유효하지만 VOICE_AGENT_TASK_API_BASE_URL의 hostname과 VOICE_AGENT_TASK_APPROVED_HOST가 다르다. 외부 HTTP 요청은 0회이며 키 유효성·403 해소 여부는 판정하지 않았다. 승인 호스트를 임의 변경하지 않고 의도한 업무 API 서버에 맞춰 두 설정을 일치시키도록 안내했다.

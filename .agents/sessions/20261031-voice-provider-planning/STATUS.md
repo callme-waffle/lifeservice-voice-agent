@@ -68,3 +68,7 @@ User confirmed successful voice conversation and explicitly stated they hung up 
 ## M15 retest — 2026-11-02T01:14:13.202422+00:00
 
 Main worktree moved to work/VOIC-FEAT-012; isolated /tmp/voice-provider-acceptance on codex/voice-providers at c3c2740. Preserve dashboard changes. Unit 152 and local integration 14 unique cases passed. Added four actual localhost WebSocket failure/reacceptance cases; first disconnect assertion assumption corrected, no runtime code change. Real outbound once: dialing→active→ended; user confirmed normal call and personal hangup. 128 segments, 3186 output delay samples all ≤200ms; not total-response or full performance acceptance. Test container stopped and phone ports released; encrypted outbound volume remains. Task API failed, diagnostic HTTP403. See VOIC-FEAT-010-log-05. No extra remote source transfer.
+
+## Task configuration recheck — 2026-11-02T10:27:28.913380+09:00
+
+User reported settings recorded. Current task base URL hostname differs from approved host; adapter validation stops before HTTP (0 requests). Prior HTTP403 resolution remains unverified. User must align intended task base URL and approved host; no secrets printed or allowlist changed.
