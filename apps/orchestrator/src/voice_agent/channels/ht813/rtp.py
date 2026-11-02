@@ -26,6 +26,7 @@ class RTPMedia:
         self._sequence = secrets.randbits(16)
         self._timestamp = secrets.randbits(32)
         self._ssrc = secrets.randbits(32)
+        self._send_at = 0.0
         self._next_audio = 0
         self._incoming_audio = 0
         self._send_rate_state = None
@@ -60,7 +61,7 @@ class RTPMedia:
         )
         encoder = audioop.lin2ulaw if self._payload_type == 0 else audioop.lin2alaw
         loop = asyncio.get_running_loop()
-        send_at = loop.time()
+        send_at = max(self._send_at, loop.time())
         for offset in range(0, len(reduced), 320):
             await asyncio.sleep(max(0.0, send_at - loop.time()))
             frame = reduced[offset:offset + 320]
@@ -71,6 +72,7 @@ class RTPMedia:
             await loop.sock_sendto(self._socket, packet, self._peer)
             self._timestamp = (self._timestamp + 160) & 0xFFFFFFFF
             send_at += .02
+            self._send_at = send_at
 
     async def send_dtmf(self, event: DtmfEvent) -> None:
         if self._peer is None or event.session_id != self.session_id or self._telephone_type is None:

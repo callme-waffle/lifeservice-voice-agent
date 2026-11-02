@@ -52,6 +52,9 @@ class OutboundCallManager:
                     context, sink, cancel, lease, lambda: normal_end[0],
                 ))
                 try:
+                    done, _ = await asyncio.wait({dial_task, core_task}, return_when=asyncio.FIRST_COMPLETED)
+                    if core_task in done:
+                        cancel.cancel()
                     await dial_task
                 finally:
                     normal_end[0] = sink.final_status is CallStatus.ENDED and not cancel.cancelled

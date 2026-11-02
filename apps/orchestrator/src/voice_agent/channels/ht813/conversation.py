@@ -52,6 +52,25 @@ class PhoneMediaConversation:
         self, context: SessionContext, sink: EventSink, cancel: CancellationToken,
         lease: SessionLease, ended_normally: Callable[[], bool],
     ) -> None:
+        if getattr(self.runner, "continuous_input", False):
+            async def continuous():
+                while not cancel.cancelled:
+                    yield await self.media.receive_audio()
+
+            async def continuous_dtmf():
+                while not cancel.cancelled:
+                    event = await self.media.receive_dtmf()
+                    await sink.publish(EventEnvelope(context.session_id, 0, event))
+
+            dtmf = asyncio.create_task(continuous_dtmf())
+            try:
+                await self.runner.run(context, continuous(), sink, self.media.send_audio,
+                                      cancel, lease=lease)
+            finally:
+                dtmf.cancel()
+                await asyncio.gather(dtmf, return_exceptions=True)
+            return
+
         ready = asyncio.Event()
         ready.set()
         detector = SpeechTurnDetector(self.boundary)

@@ -122,3 +122,27 @@ python -m pytest -c apps/orchestrator/pyproject.toml tests/units/orchestrator/te
 - [ADR-009](../../docs/records/3_decisions/ADR-009-ht813-all-inbound-agent.md): 전체 FXO 착신
 - [ADR-011](../../docs/records/3_decisions/ADR-011-warm-model-services-observability.md): 모델 상주·관측 배치
 - [ADR-012](../../docs/records/3_decisions/ADR-012-encrypted-call-index-for-history.md): 암호화 착신 인덱스·대화 조회
+
+## Selectable voice provider (VOIC-FEAT-010)
+
+`VOICE_AGENT_VOICE_PROVIDER` selects `onprem` (default) or `openai_live` at startup.
+Live uses `adapters/live.py` for the authenticated server WebSocket and `core/live.py`
+for independent capture, playback, transcription and client delegation. It does not
+construct or probe STT/TTS. `continuous_input` selects the phone path that bypasses
+turn VAD; the shared session gate still owns admission. Existing onprem behavior remains.
+
+Live takes mono PCM16 at 24 kHz; channels retain their 16 kHz contract. Output is framed
+at 20 ms before RTP. Capture cancellation also interrupts a pending API connection.
+Web `end` mutes input and drains for a bounded interval; `cancel` remains readable.
+Audio queues and transcript context are bounded; failures end the session without fallback.
+
+Encrypted Live recordings use schema version 2 with direction and sample positions.
+Partial transcript records include direction and time offsets, and telephone history
+returns `segments` alongside the legacy `turns` field. Generated and sent audio are distinct.
+The final usage acknowledgement may be incomplete; health never opens an API session.
+
+Configuration, secure key injection, Compose selection and real-call gates are documented
+in [provider operation](../../docs/guides/voice-provider-operation.md).
+Unit verification: `python -m pytest -c apps/orchestrator/pyproject.toml tests/units/orchestrator/testcodes`
+from the repository root. Local boundary tests live in `tests/integrations/voice_provider/`
+and require the repository integration approval gates.

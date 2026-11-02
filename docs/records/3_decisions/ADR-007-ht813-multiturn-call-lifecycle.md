@@ -3,14 +3,14 @@
 |key|value|
 |---|---|
 |ADR ID|ADR-007-ht813-multiturn-call-lifecycle|
-|상태|accepted|
+|상태|superseded|
 |결정 시간|2026-09-24 14:44 UTC (다중 턴·종료), 14:46 UTC (같은 통화 문맥 전송)|
 |결정자|사용자 (한 통화에서 계속 대화·상대 종료를 명시하고 같은 통화 문맥 전송을 별도 승인)|
 |기록 에이전트|Codex|
 |관련 이슈|[VOIC-FEAT-001](../0_issues/VOIC-FEAT-001.md)|
 |관련 계획|[VOIC-FEAT-001-plan-02](../1_plans/VOIC-FEAT-001-plan-02.md) (M6 변경안 재검토 필요)|
 |대체 대상|[ADR-006](ADR-006-ht813-voice-turn-boundary.md)|
-|대체 문서|(없음)|
+|대체 문서|[ADR-014](ADR-014-selectable-voice-provider.md) — 제공자별 확장, 나머지 계약 계승|
 
 ---
 

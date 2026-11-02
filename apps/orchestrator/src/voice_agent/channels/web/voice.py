@@ -58,7 +58,29 @@ def web_voice_router(runner: VoiceSessionRunner, access_token: str) -> APIRouter
             async with send_lock:
                 await ws.send_bytes(chunk.sequence.to_bytes(4, "big") + chunk.data)
 
+        drain_monitor = None
+
+        async def watch_drain():
+            # Input is complete, but cancellation must remain available during output drain.
+            try:
+                while True:
+                    message = await ws.receive()
+                    if message["type"] == "websocket.disconnect":
+                        token.cancel()
+                        return
+                    if message.get("bytes") is not None:
+                        token.cancel()
+                        return
+                    if json.loads(message.get("text") or "") == {"type": "cancel"}:
+                        token.cancel()
+                        return
+                    token.cancel()
+                    return
+            except (ValueError, RuntimeError, WebSocketDisconnect):
+                token.cancel()
+
         async def incoming():
+            nonlocal drain_monitor
             sequence = 0
             try:
                 while True:
@@ -78,6 +100,8 @@ def web_voice_router(runner: VoiceSessionRunner, access_token: str) -> APIRouter
                         continue
                     command = json.loads(message.get("text") or "")
                     if command == {"type": "end"}:
+                        if getattr(runner, "continuous_input", False):
+                            drain_monitor = asyncio.create_task(watch_drain())
                         return
                     if command == {"type": "cancel"}:
                         token.cancel()
@@ -100,6 +124,9 @@ def web_voice_router(runner: VoiceSessionRunner, access_token: str) -> APIRouter
                 pass
         finally:
             token.cancel()
+            if drain_monitor is not None:
+                drain_monitor.cancel()
+                await asyncio.gather(drain_monitor, return_exceptions=True)
             try:
                 await ws.close()
             except RuntimeError:

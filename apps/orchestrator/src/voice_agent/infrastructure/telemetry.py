@@ -10,7 +10,7 @@ from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExport
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
-from prometheus_client import Histogram
+from prometheus_client import Histogram, Counter, Gauge
 
 
 STAGE_SECONDS = Histogram(
@@ -37,3 +37,12 @@ def stage(name: str):
             yield
         finally:
             STAGE_SECONDS.labels(stage=name).observe(monotonic() - started)
+
+
+LIVE_AUDIO_SECONDS = Counter("voice_live_audio_seconds", "Live audio duration", ["direction"])
+LIVE_QUEUE_SECONDS = Gauge("voice_live_output_queue_seconds", "Queued Live playback duration")
+LIVE_MEDIA_SECONDS = Histogram("voice_live_media_delay_seconds", "Output enqueue to send completion",
+                               buckets=(.02, .05, .1, .2, .5, 1, 2))
+LIVE_FAILURES = Counter("voice_live_failures", "Live session failures", ["reason"])
+LIVE_FINALIZATIONS = Counter("voice_live_finalizations", "Live final usage acknowledgement", ["status"])
+LIVE_USAGE_SECONDS = Gauge("voice_live_last_session_usage_seconds", "Latest cumulative usage snapshot")

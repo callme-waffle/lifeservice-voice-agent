@@ -3,14 +3,14 @@
 |key|value|
 |---|---|
 |ADR ID|ADR-011-warm-model-services-observability|
-|상태|accepted|
+|상태|superseded|
 |결정 시간|2026-10-07 13:39:49 UTC|
 |결정자|사용자 (2026-10-07 모델별 컨테이너·30초 지연·Tempo/Grafana 명시 지시)|
 |기록 에이전트|Codex|
 |관련 이슈|[VOIC-FEAT-001](../0_issues/VOIC-FEAT-001.md)|
 |관련 계획|[VOIC-FEAT-001-plan-02](../1_plans/VOIC-FEAT-001-plan-02.md)|
 |대체 대상|[ADR-009](ADR-009-ht813-all-inbound-agent.md)의 단일 컴포넌트 배치 전제, [ADR-010](ADR-010-gpu-vm-direct-telephony-lan.md)의 systemd 단일 앱 배포 제안|
-|대체 문서|(없음)|
+|대체 문서|[ADR-014](ADR-014-selectable-voice-provider.md) — 제공자별 확장, 나머지 계약 계승|
 
 ---
 

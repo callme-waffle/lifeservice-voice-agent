@@ -118,6 +118,7 @@ class InboundSIPService:
         self._socket: socket.socket | None = None
         self._reader: asyncio.Task[None] | None = None
         self._packets: set[asyncio.Task[None]] = set()
+        self._termination_completions: dict[asyncio.Task[None], asyncio.Future[None]] = {}
         self._dialog: _Dialog | None = None
         self._lock = asyncio.Lock()
 
@@ -410,6 +411,19 @@ class InboundSIPService:
             self._dialog = None
             dialog.normal_end = normal
             dialog.cancel.cancel()
+            # Track cleanup itself, including callers in accept/conversation/media
+            # tasks; _dialog is already gone when shutdown races (VOIC-BUG-009).
+            owner = asyncio.current_task()
+            assert owner is not None
+            completion = asyncio.get_running_loop().create_future()
+            self._termination_completions[owner] = completion
+        try:
+            await self._finish_termination(dialog, normal=normal)
+        finally:
+            completion.set_result(None)
+            del self._termination_completions[owner]
+
+    async def _finish_termination(self, dialog: _Dialog, *, normal: bool) -> None:
         if dialog.accept_task is not None and dialog.accept_task is not asyncio.current_task():
             dialog.accept_task.cancel()
             await asyncio.gather(dialog.accept_task, return_exceptions=True)
@@ -445,7 +459,10 @@ class InboundSIPService:
             await asyncio.gather(self._reader, return_exceptions=True)
             self._reader = None
         for task in tuple(self._packets):
-            task.cancel()
+            # A packet error can already own cleanup after removing _dialog.
+            # Cancelling that task would skip resource reclamation.
+            if task not in self._termination_completions:
+                task.cancel()
         await asyncio.gather(*self._packets, return_exceptions=True)
         try:
             dialog = self._dialog
@@ -459,6 +476,12 @@ class InboundSIPService:
                 finally:
                     await self._terminate(dialog, normal=False)
         finally:
-            if self._socket is not None:
-                self._socket.close()
-                self._socket = None
+            try:
+                # Wait for cleanup, not its caller task: callers can await each
+                # other during shutdown. A cancelled waiter must not cancel cleanup.
+                await asyncio.gather(*(asyncio.shield(completion)
+                                       for completion in tuple(self._termination_completions.values())))
+            finally:
+                if self._socket is not None:
+                    self._socket.close()
+                    self._socket = None

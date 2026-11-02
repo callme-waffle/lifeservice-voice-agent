@@ -331,3 +331,148 @@ async def test_voic_feat_001_m6_s2_shutdown_sends_bye_before_releasing(send_fail
         assert len(bye_attempts) == 1
     finally:
         await inbound.close()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("ending_method", [
+    "BYE", "CANCEL", "MEDIA_FAILURE", "ACK_SEND_FAILURE", "CONVERSATION_END",
+])
+async def test_voic_bug_009_close_waits_for_pending_termination(ending_method):
+    """Given blocked end retention on each termination path, when closing, then wait for cleanup.
+
+    VOIC-BUG-009: media and retention are fakes; Events fix the shutdown race
+    without a real socket, filesystem, model, or wall-clock timing assumption.
+    """
+    entered, release, close_started = asyncio.Event(), asyncio.Event(), asyncio.Event()
+    ended = []
+
+    class WaitingRunner:
+        async def run_call(self, context, turns, events, send_audio, cancel, **kwargs):
+            if ending_method != "CONVERSATION_END":
+                await cancel.wait()
+
+    class BlockingRetention:
+        async def record_call_start(self, context, caller_number):
+            pass
+
+        async def record_call_end(self, context, status):
+            entered.set()
+            await release.wait()
+            ended.append((context.session_id, status))
+
+    inbound, gate, sent, medias, _ = service(WaitingRunner(), retention=BlockingRetention())
+    closing = None
+    expected_status = "ended" if ending_method in ("BYE", "CANCEL") else "failed"
+    original_send = inbound._send_packet
+
+    async def send(data, peer):
+        if ending_method == "ACK_SEND_FAILURE" and parse_sip(data).status == 200:
+            raise OSError("synthetic answer send failure")
+        await original_send(data, peer)
+
+    inbound._send_packet = send
+    try:
+        await inbound.handle_packet(packet("INVITE"), PEER)
+        sid = gate.active_session_id
+        if ending_method not in ("CANCEL", "ACK_SEND_FAILURE"):
+            await wait_for(lambda: any(message.status == 200 for message in sent))
+            await inbound.handle_packet(packet("ACK", sdp=False), PEER)
+        if ending_method in ("BYE", "CANCEL"):
+            await inbound.handle_packet(packet(ending_method, sdp=False), PEER)
+        elif ending_method == "MEDIA_FAILURE":
+            medias[0].failed.set()
+        await asyncio.wait_for(entered.wait(), 1)
+        assert gate.active_session_id == sid
+        assert medias[0].closed
+
+        async def close_service():
+            close_started.set()
+            await inbound.close()
+
+        closing = asyncio.create_task(close_service())
+        await close_started.wait()
+        assert not closing.done(), "close returned before pending termination released its lease"
+        release.set()
+        await asyncio.wait_for(closing, 1)
+        assert ended == [(sid, expected_status)]
+        assert gate.active_session_id is None
+        await inbound.close()
+        assert ended == [(sid, expected_status)]
+    finally:
+        release.set()
+        if closing is not None:
+            await asyncio.wait_for(closing, 1)
+        await wait_for(lambda: gate.active_session_id is None)
+        await inbound.close()
+
+
+@pytest.mark.asyncio
+async def test_voic_bug_009_close_preserves_packet_error_cleanup():
+    """Given packet-error cleanup awaiting the runner, when closing, then reclaim resources.
+
+    VOIC-BUG-009: fake dispatch, media and retention use Events to put shutdown
+    inside conversation cleanup, without sockets or elapsed-time assumptions.
+    """
+    running, cleaning, release, close_started = (asyncio.Event() for _ in range(4))
+    ended = []
+
+    class WaitingRunner:
+        async def run_call(self, context, turns, events, send_audio, cancel, **kwargs):
+            running.set()
+            await cancel.wait()
+            cleaning.set()
+            await release.wait()
+
+    class Retention:
+        async def record_call_start(self, context, caller_number):
+            pass
+
+        async def record_call_end(self, context, status):
+            ended.append((context.session_id, status))
+
+    inbound, gate, sent, medias, _ = service(WaitingRunner(), retention=Retention())
+    dispatch = closing = dialog = None
+    try:
+        await inbound.handle_packet(packet("INVITE"), PEER)
+        await wait_for(lambda: any(message.status == 200 for message in sent))
+        await inbound.handle_packet(packet("ACK", sdp=False), PEER)
+        await asyncio.wait_for(running.wait(), 1)
+        dialog = inbound._dialog
+        sid = gate.active_session_id
+
+        async def fail_packet(data, source):
+            raise RuntimeError("synthetic packet handler failure")
+
+        inbound.handle_packet = fail_packet
+        dispatch = asyncio.create_task(inbound._dispatch_packet(b"synthetic", PEER))
+        inbound._packets.add(dispatch)
+        dispatch.add_done_callback(inbound._packets.discard)
+        await asyncio.wait_for(cleaning.wait(), 1)
+        assert gate.active_session_id == sid
+        assert not medias[0].closed
+
+        async def close_service():
+            close_started.set()
+            await inbound.close()
+
+        closing = asyncio.create_task(close_service())
+        await close_started.wait()
+        release.set()
+        await asyncio.wait_for(closing, 1)
+        assert medias[0].closed, "close cancelled packet-error cleanup before media close"
+        assert gate.active_session_id is None
+        assert ended == [(sid, "failed")]
+        await inbound.close()
+        assert ended == [(sid, "failed")]
+    finally:
+        release.set()
+        await asyncio.gather(*(task for task in (closing, dispatch) if task is not None),
+                             return_exceptions=True)
+        # Reclaim fake resources even when the pre-fix assertion exposes the leak.
+        if dialog is not None:
+            if dialog.media_watch is not None:
+                dialog.media_watch.cancel()
+                await asyncio.gather(dialog.media_watch, return_exceptions=True)
+            await dialog.media.close()
+            await dialog.lease.release()
+        await inbound.close()

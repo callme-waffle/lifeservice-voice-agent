@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import base64
+import math
 from dataclasses import dataclass, field
 from pathlib import Path
 from collections.abc import Mapping
@@ -84,8 +85,39 @@ class Settings:
     metrics_host: str | None = None
     metrics_port: int = 8001
 
+    voice_provider: str = "onprem"
+    openai_key: str = field(default="", repr=False)
+    live_model: str = "gpt-live-1"
+    live_voice: str = "marin"
+    live_connect_timeout_s: float = 10
+    live_drain_timeout_s: float = 5
+    live_queue_ms: int = 500
+
     @classmethod
     def from_env(cls, env: Mapping[str, str]) -> Settings:
+        provider = env.get("VOICE_AGENT_VOICE_PROVIDER", "onprem")
+        if provider not in ("onprem", "openai_live"):
+            raise ValueError("invalid VOICE_AGENT_VOICE_PROVIDER")
+        live = provider == "openai_live"
+        live_options = {}
+        if live:
+            live_options = {
+                "openai_key": _secret(env, "VOICE_AGENT_OPENAI_API_KEY"),
+                "live_model": env.get("VOICE_AGENT_OPENAI_LIVE_MODEL", "gpt-live-1").strip(),
+                "live_voice": env.get("VOICE_AGENT_OPENAI_LIVE_VOICE", "marin").strip(),
+                "live_queue_ms": _number(env, "VOICE_AGENT_LIVE_AUDIO_QUEUE_MAX_MS", "500", int),
+            }
+            for suffix, attr, default in (("CONNECT", "live_connect_timeout_s", "10"),
+                                          ("DRAIN", "live_drain_timeout_s", "5")):
+                key = f"VOICE_AGENT_OPENAI_LIVE_{suffix}_TIMEOUT_SECONDS"
+                value = _number(env, key, default, float)
+                if not math.isfinite(value) or not 0 < value <= 60:
+                    raise ValueError(f"invalid {key}")
+                live_options[attr] = value
+            if not live_options["live_model"] or not live_options["live_voice"]:
+                raise ValueError("invalid VOICE_AGENT_OPENAI_LIVE_MODEL or VOICE_AGENT_OPENAI_LIVE_VOICE")
+            if not 40 <= live_options["live_queue_ms"] <= 2000:
+                raise ValueError("invalid VOICE_AGENT_LIVE_AUDIO_QUEUE_MAX_MS")
         if env.get("VOICE_AGENT_MAX_ACTIVE_SESSIONS", "1") != "1":
             raise ValueError("VOICE_AGENT_MAX_ACTIVE_SESSIONS must be 1")
         if env.get("VOICE_AGENT_TASK_MAX_RETRIES", "0") != "0":
@@ -117,22 +149,24 @@ class Settings:
         sweep_interval = _number(env, "VOICE_AGENT_RETENTION_SWEEP_INTERVAL_SECONDS", "3600", int)
         if not 60 <= sweep_interval <= 86400:
             raise ValueError("invalid VOICE_AGENT_RETENTION_SWEEP_INTERVAL_SECONDS")
-        stt_model = _required(env, "VOICE_AGENT_STT_MODEL_ID")
-        if stt_model not in ("small", "medium"):
-            raise ValueError("unsupported VOICE_AGENT_STT_MODEL_ID")
-        if env.get("VOICE_AGENT_STT_BACKEND", "faster-whisper") != "faster-whisper":
-            raise ValueError("unsupported VOICE_AGENT_STT_BACKEND")
-        if env.get("VOICE_AGENT_TTS_BACKEND", "MeloTTS-Korean") != "MeloTTS-Korean":
-            raise ValueError("unsupported VOICE_AGENT_TTS_BACKEND")
-        if env.get("VOICE_AGENT_TTS_MODEL_ID", "MeloTTS-Korean") != "MeloTTS-Korean":
-            raise ValueError("unsupported VOICE_AGENT_TTS_MODEL_ID")
-        speed = _number(env, "VOICE_AGENT_TTS_SPEED", "1.25", float)
-        if not .5 <= speed <= 2:
-            raise ValueError("invalid VOICE_AGENT_TTS_SPEED")
-        stt_endpoint = env.get("VOICE_AGENT_STT_ENDPOINT") or None
-        tts_endpoint = env.get("VOICE_AGENT_TTS_ENDPOINT") or None
-        if bool(stt_endpoint) != bool(tts_endpoint):
-            raise ValueError("both model endpoints must be configured together")
+        stt_model, speed, stt_endpoint, tts_endpoint = "", 1.25, None, None
+        if not live:
+            stt_model = _required(env, "VOICE_AGENT_STT_MODEL_ID")
+            if stt_model not in ("small", "medium"):
+                raise ValueError("unsupported VOICE_AGENT_STT_MODEL_ID")
+            if env.get("VOICE_AGENT_STT_BACKEND", "faster-whisper") != "faster-whisper":
+                raise ValueError("unsupported VOICE_AGENT_STT_BACKEND")
+            if env.get("VOICE_AGENT_TTS_BACKEND", "MeloTTS-Korean") != "MeloTTS-Korean":
+                raise ValueError("unsupported VOICE_AGENT_TTS_BACKEND")
+            if env.get("VOICE_AGENT_TTS_MODEL_ID", "MeloTTS-Korean") != "MeloTTS-Korean":
+                raise ValueError("unsupported VOICE_AGENT_TTS_MODEL_ID")
+            speed = _number(env, "VOICE_AGENT_TTS_SPEED", "1.25", float)
+            if not .5 <= speed <= 2:
+                raise ValueError("invalid VOICE_AGENT_TTS_SPEED")
+            stt_endpoint = env.get("VOICE_AGENT_STT_ENDPOINT") or None
+            tts_endpoint = env.get("VOICE_AGENT_TTS_ENDPOINT") or None
+            if bool(stt_endpoint) != bool(tts_endpoint):
+                raise ValueError("both model endpoints must be configured together")
         otel_endpoint = env.get("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT") or None
         metrics_host = env.get("VOICE_AGENT_METRICS_HOST") or None
         metrics_port = _number(env, "VOICE_AGENT_METRICS_PORT", "8001", int)
@@ -149,9 +183,9 @@ class Settings:
         if not 1 <= port <= 65535 or capacity < 1:
             raise ValueError("invalid application port or queue capacity")
         timeouts = StepTimeouts(
-            _number(env, "VOICE_AGENT_STT_TIMEOUT_SECONDS", "120", float),
+            120 if live else _number(env, "VOICE_AGENT_STT_TIMEOUT_SECONDS", "120", float),
             _number(env, "VOICE_AGENT_TASK_TIMEOUT_SECONDS", "60", float),
-            _number(env, "VOICE_AGENT_TTS_TIMEOUT_SECONDS", "120", float),
+            120 if live else _number(env, "VOICE_AGENT_TTS_TIMEOUT_SECONDS", "120", float),
         )
         exact = _csv(env.get("VOICE_AGENT_HT813_ALLOWED_EXACT", ""))
         prefixes = _csv(env.get("VOICE_AGENT_HT813_ALLOWED_PREFIXES", ""))
@@ -179,6 +213,7 @@ class Settings:
         local_host = _required(env, "VOICE_AGENT_HT813_LOCAL_IPV4") if configured else None
         user = _required(env, "VOICE_AGENT_HT813_SIP_USER_ID") if configured else None
         return cls(
+            voice_provider=provider, **live_options,
             host=env.get("VOICE_AGENT_API_HOST", "127.0.0.1"), port=port,
             web_token=_secret(env, "VOICE_AGENT_WEB_ACCESS_TOKEN"),
             stt_model=stt_model, tts_speed=speed,

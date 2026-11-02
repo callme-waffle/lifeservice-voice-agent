@@ -3,14 +3,14 @@
 |key|value|
 |---|---|
 |ADR ID|ADR-008-local-encrypted-retention|
-|상태|accepted|
+|상태|superseded|
 |결정 시간|2026-09-24 15:14 UTC (사용자 “ADR-008 승인”)|
 |결정자|사용자|
 |기록 에이전트|Codex|
 |관련 이슈|[VOIC-FEAT-001](../0_issues/VOIC-FEAT-001.md)|
 |관련 계획|[VOIC-FEAT-001-plan-02](../1_plans/VOIC-FEAT-001-plan-02.md) (M6 변경 승인)|
 |대체 대상|(없음)|
-|대체 문서|(없음)|
+|대체 문서|[ADR-014](ADR-014-selectable-voice-provider.md) — 제공자별 확장, 나머지 계약 계승|
 
 ---
 
