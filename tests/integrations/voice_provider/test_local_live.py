@@ -139,3 +139,89 @@ async def test_live_and_legacy_phone_history_coexist_and_expire(tmp_path):
             assert (await client.get(f'/operator/calls/{live.session_id}/conversation')).status_code == 404
     finally:
         await storage.close()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('fault', ['unauthorized', 'rate_limit', 'handshake_timeout', 'disconnect'])
+async def test_live_transport_failure_releases_slot_and_accepts_next_session(tmp_path, fault):
+    """VOIC-FEAT-010 I05, PRD/SRS VOICE04/05.
+
+    Given a real localhost WebSocket failure and encrypted storage, when a
+    session fails, then publish a sanitized error, release its slot and allow
+    a second session to send audio and finalize without retrying the first.
+    """
+    from websockets.http11 import Response
+    from websockets.datastructures import Headers
+    from voice_agent.contracts.flow import CancellationToken
+    from voice_agent.contracts.media import AudioChunk, INTERNAL_AUDIO_FORMAT
+    from voice_agent.contracts.session import PublicError
+
+    attempts = 0
+    storage, gate = store_at(tmp_path), SingleSessionGate()
+    observed = []
+
+    async def process_request(connection, request):
+        nonlocal attempts
+        attempts += 1
+        if attempts == 1 and fault in ('unauthorized', 'rate_limit'):
+            code = 401 if fault == 'unauthorized' else 429
+            return Response(code, 'Synthetic rejection', Headers(), b'private synthetic detail')
+
+    async def api(ws):
+        await ws.recv()
+        if attempts == 1 and fault == 'handshake_timeout':
+            await ws.wait_closed()
+            return
+        await ws.send(json.dumps({'type': 'session.started'}))
+        if attempts == 1 and fault == 'disconnect':
+            await ws.close(code=1011, reason='private synthetic detail')
+            return
+        async for raw in ws:
+            event = json.loads(raw)
+            if event['type'] == 'session.close':
+                await ws.send(json.dumps({'type': 'session.closed', 'usage': {'seconds': 0}}))
+                return
+
+    class Events:
+        async def publish(self, event):
+            observed.append(event.payload)
+
+    class NoTask:
+        async def process(self, *args):
+            raise AssertionError('unexpected delegation')
+
+    async def output(chunk):
+        raise AssertionError('unexpected audio')
+
+    await storage.start()
+    try:
+        async with serve(api, '127.0.0.1', 0, process_request=process_request) as mock:
+            port = mock.sockets[0].getsockname()[1]
+            def connector(url, **kwargs):
+                assert url == 'wss://api.openai.com/v1/live/sessions'
+                return connect(f'ws://127.0.0.1:{port}', **kwargs)
+            runner = LiveRunner(OpenAILive('synthetic', 'gpt-live-1', 'marin', .2,
+                                          connector=connector), NoTask(), gate, storage, drain_s=.03)
+            async def incoming(context):
+                yield AudioChunk(context.session_id, 0, b'\0'*640, INTERNAL_AUDIO_FORMAT)
+            first = SessionContext(uuid4(), Channel.WEB, datetime.now(timezone.utc))
+            # The runner may return after its failure token wins the cancellation
+            # race. Public error and resource recovery are the channel contract.
+            try:
+                await asyncio.wait_for(runner.run(first, incoming(first), Events(), output,
+                                                 CancellationToken()), 3)
+            except Exception:
+                pass
+            assert attempts == 1
+            assert gate.active_session_id is None
+            errors = [event for event in observed if isinstance(event, PublicError)]
+            assert errors and 'private synthetic detail' not in str(errors)
+            second = SessionContext(uuid4(), Channel.WEB, datetime.now(timezone.utc))
+            await asyncio.wait_for(runner.run(second, incoming(second), Events(), output,
+                                             CancellationToken()), 3)
+            assert attempts == 2 and gate.active_session_id is None
+            assert runner.last_usage_final
+            assert list(storage.recordings_dir.glob('*.va1'))
+            assert not any(task.get_name().startswith('live-') for task in asyncio.all_tasks())
+    finally:
+        await storage.close()
